@@ -33,7 +33,7 @@ jobs:
       - name: Copy new files
         run: cp -r ../pages/* .
       - name: Commit and Push back Changes
-        use: https://github.com/stefanzweifel/git-auto-commit-action@v5
+        uses: https://github.com/stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Auto deploy pages"
           commit_user_name: "Gitea-Actions[bot]"
