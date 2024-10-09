@@ -23,9 +23,7 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Install hexo-cli
-        run: npm install hexo-cli -g
-      - name: Check repository
-        run: ls -al
+        run: npm install -g hexo-cli
       - name: Generate pages
         run: hexo generate
       - name: Copy pages
@@ -35,13 +33,9 @@ jobs:
           git fetch
           git checkout publish
       - name: Remove old files
-        run: |
-          rm -rf `ls | grep -v .git`
-          ls -al
+        run: rm -rf `ls | grep -v .git`
       - name: Copy new files
-        run: |
-          cp -r ../pages/* .
-          ls -al
+        run: cp -r ../pages/* .
       - name: Commit and Push back Changes
         uses: https://github.com/stefanzweifel/git-auto-commit-action@v5
         with:
