@@ -22,6 +22,8 @@ jobs:
           node-version: '16'
       - name: Install dependencies
         run: npm install
+      - name: Install hexo-cli
+        run: npm install hexo-cli -g
       - name: Generate pages
         run: hexo generate
       - name: Copy pages
