@@ -33,9 +33,13 @@ jobs:
           git fetch
           git checkout publish
       - name: Remove old files
-        run: rm -rf `ls | grep -v .git`
+        run: |
+          rm -rf `ls | grep -v .git`
+          ls -al
       - name: Copy new files
-        run: cp -r ../pages/* .
+        run: |
+          cp -r ../pages/* .
+          ls -al
       - name: Commit and Push back Changes
         uses: https://github.com/stefanzweifel/git-auto-commit-action@v5
         with:
