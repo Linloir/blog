@@ -3,8 +3,8 @@ run-name: ${{ gitea.event.head_commit.message }}
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - v*
 
 jobs:
   Generate-Pages:
