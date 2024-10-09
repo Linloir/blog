@@ -29,7 +29,9 @@ jobs:
       - name: Copy pages
         run: cp -r public ../pages
       - name: Checkout to `publish` branch
-        run: git checkout publish
+        run: |
+          git fetch
+          git checkout publish
       - name: Remove old files
         run: rm -rf `ls | grep -v .git`
       - name: Copy new files
