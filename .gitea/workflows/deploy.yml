@@ -27,7 +27,7 @@ jobs:
       - name: Generate pages
         run: hexo generate
       - name: Copy pages
-        run: cp -r public/* ../pages
+        run: cp -r public ../pages
       - name: Checkout to `publish` branch
         run: git checkout publish
       - name: Remove old files
