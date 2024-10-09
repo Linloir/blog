@@ -24,6 +24,8 @@ jobs:
         run: npm install
       - name: Install hexo-cli
         run: npm install hexo-cli -g
+      - name: Check repository
+        run: ls -al
       - name: Generate pages
         run: hexo generate
       - name: Copy pages
