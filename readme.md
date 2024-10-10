@@ -1,6 +1,6 @@
 # Linloir's blog
 
-Blog about me.
+[Blog](https://blog.linloir.cn) about me.
 
 Powered by [Hexo](https://hexo.io/) and [Butterfly](https://github.com/jerryc127/hexo-theme-butterfly).
 
@@ -29,6 +29,7 @@ Workflow of this blog is licensed under [MIT](https://opensource.org/licenses/MI
 - [Gitea](https://gitea.io/) for self-hosted git service
 - [Caddy](https://caddyserver.com/) for reverse proxy and web server
 - [Caddy-Git](https://github.com/greenpau/caddy-git) for git integration with Caddy which allows me to serve my repo as a website
+- [Cloudflare](https://www.cloudflare.com/) for DNS and CDN (providing v4-v6 proxy)
 - [Mac Mini](https://www.apple.com/mac-mini/) for hosting the blog in my home network
 
 ## Contact
