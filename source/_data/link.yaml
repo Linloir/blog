@@ -1,0 +1,6 @@
+- class_name: 关于我
+  link_list:
+    - name: GitHub
+      link: https://github.com/Linloir
+    - name: BiliBili
+      link: https://space.bilibili.com/57762388

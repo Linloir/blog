@@ -1,0 +1,13 @@
+nav:
+  logo:
+  display_title: true
+  fixed: false
+
+menu:
+  主页: / || fas fa-home
+  标签: /tags/ || fas fa-tags
+  分类: /categories/ || fas fa-th
+  归档: /archives/ || fas fa-archive
+  链接||fas fa-list:
+    友链: /link/ || fas fa-link
+    关于: /about/ || fas fa-heart
