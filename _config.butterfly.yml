@@ -11,3 +11,23 @@ menu:
   链接||fas fa-list:
     友链: /link/ || fas fa-link
     关于: /about/ || fas fa-heart
+  
+hide_sidebar_menu_child: true
+
+highlight_theme: darker
+highlight_shrink: false
+highlight_height_limit: 240
+
+avatar:
+  img: /img/avatar.png
+
+social:
+  fab fa-github: https://github.com/Linloir || GitHub
+  fas fa-envelope: mailto:jonathanzhang.st@gmail.com || Email
+
+index_img: /img/index.jpg
+
+subtitle:
+  enable: true
+  effect: true
+  sub: "Run fast, Laugh hard, and Be kind"
