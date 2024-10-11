@@ -26,6 +26,7 @@ social:
   fas fa-envelope: mailto:jonathanzhang.st@gmail.com || Email
 
 index_img: /img/index.jpg
+footer_img: true
 
 subtitle:
   enable: true
@@ -34,3 +35,145 @@ subtitle:
     - "我, 技术, 生活与值得分享的一切"
     - "Run fast, Laugh hard, and Be kind"
     - "从这里, 瞥见时间流过的痕迹"
+
+cover:
+  index_enable: false
+  aside_enable: false
+  archives_enable: false
+  default_cover: /img/index.jpg
+
+index_post_content:
+  method: 3
+  length: 500
+
+toc:
+  post: true
+  page: false
+  number: true
+  expand: false
+  scroll_percent: false
+
+post_copyright:
+  enable: true
+  decode: true
+  author_href: https://blog.linloir.cn
+  license: CC BY-NC-SA 4.0
+  license_url: https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+post_edit:
+  enable: false
+
+noticeOutdate:
+  enable: false
+  # Style: simple / flat
+  style: flat
+  # When will it be shown
+  limit_day: 365
+  # Position: top / bottom
+  position: top
+  message_prev: It has been
+  message_next: days since the last update, the content of the article may be outdated.
+
+footer:
+  owner:
+    enable: true
+    since: 2022
+  custom_text: Wirtten with Love ❤
+  copyright: true
+
+aside:
+  enable: true
+  hide: false
+  button: true
+  mobile: true
+  position: right
+  display:
+    archive: true
+    tag: true
+    category: true
+  card_author:
+    enable: true
+    description:
+  card_announcement:
+    enable: false
+  card_recent_post:
+    enable: true
+    limit: 5
+    sort: date
+    sort_order:
+  card_newest_comments:
+    enable: false
+  card_categories:
+    enable: true
+    limit: 0
+    expand: none
+    sort_order:
+  card_tags:
+    # 是否顯示標籤卡片
+    enable: false
+    # 顯示標籤數量，0 表示顯示所有
+    limit: 40
+    # 是否啟用顏色
+    color: false
+    # 標籤排序方式：random/name/length
+    orderby: random
+    # 排序順序：1 表示升序，-1 表示降序
+    order: 1
+    sort_order:
+  card_archives:
+    enable: true
+    # 歸檔類型：monthly / yearly
+    type: yearly
+    # 日期格式，例如：YYYY年MM月
+    format: YYYY
+    # 排序順序：1 表示升序，-1 表示降序
+    order: -1
+    # 顯示歸檔數量，0 表示顯示所有
+    limit: 0
+    sort_order:
+  card_post_series:
+    # 是否顯示系列文章卡片
+    enable: true
+    # 標題顯示系列名稱
+    series_title: false
+    # 排序方式：title 或 date
+    orderBy: 'date'
+    # 排序順序：1 表示升序，-1 表示降序
+    order: -1
+  card_webinfo:
+    # 是否顯示網站信息卡片
+    enable: true
+    # 是否顯示文章數量
+    post_count: true
+    # 是否顯示最後推送日期
+    last_push_date: true
+    sort_order:
+    # 發佈日期與當前日期的時間差
+    # 格式：Month/Day/Year Time 或 Year/Month/Day Time
+    # 如果不啟用此功能，請留空
+    runtime_date:
+
+translate:
+  enable: true
+  # 按鈕文本
+  default: 简
+  # 網站語言（1 - 繁體中文 / 2 - 簡體中文）
+  defaultEncoding: 2
+  # 轉換延遲
+  translateDelay: 0
+  # 按鈕在簡體中文時的文本
+  msgToTraditionalChinese: '繁'
+  # 按鈕在繁體中文時的文本
+  msgToSimplifiedChinese: '简'
+
+readmode: true
+
+darkmode:
+  enable: true
+  button: true
+
+rightside_scroll_percent: false
+
+anchor:
+  auto_update: true
+  click_to_scroll: true
