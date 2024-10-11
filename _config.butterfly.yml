@@ -9,7 +9,7 @@ menu:
   分类: /categories/ || fas fa-th
   归档: /archives/ || fas fa-archive
   链接||fas fa-list:
-    友链: /link/ || fas fa-link
+    友链: /links/ || fas fa-link
     关于: /about/ || fas fa-heart
   
 hide_sidebar_menu_child: true
@@ -30,4 +30,7 @@ index_img: /img/index.jpg
 subtitle:
   enable: true
   effect: true
-  sub: "Run fast, Laugh hard, and Be kind"
+  sub:
+    - "我, 技术, 生活与值得分享的一切"
+    - "Run fast, Laugh hard, and Be kind"
+    - "从这里, 瞥见时间流过的痕迹"
