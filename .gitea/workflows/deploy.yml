@@ -42,7 +42,9 @@ jobs:
           commit_message: "Auto deploy pages"
           commit_user_name: "Linloir"
           commit_user_email: "3145078758@qq.com"
+          commit_author: "Linloir <3145078758@qq.com>"
           branch: publish
           commit_options: "--no-verify"
+          token: "${{ secrets.TOKEN }}"
       - name: Call API to Update Caddy
         run: curl https://upd.linloir.cn/update/blog.linloir.gitea.linloir.cn
