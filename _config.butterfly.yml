@@ -1,5 +1,6 @@
+favicon: /img/avatar.png
+
 nav:
-  logo:
   display_title: true
   fixed: false
 
@@ -8,9 +9,9 @@ menu:
   标签: /tags/ || fas fa-tags
   分类: /categories/ || fas fa-th
   归档: /archives/ || fas fa-archive
-  链接||fas fa-list:
-    友链: /links/ || fas fa-link
-    关于: /about/ || fas fa-heart
+  # 链接||fas fa-list:
+  #   友链: /links/ || fas fa-link
+  #   关于: /about/ || fas fa-heart
   
 hide_sidebar_menu_child: true
 
@@ -26,6 +27,8 @@ social:
   fas fa-envelope: mailto:jonathanzhang.st@gmail.com || Email
 
 index_img: /img/index.jpg
+default_top_img: /img/top.jpg
+archive_img: /img/top.jpg
 footer_img: transparent
 
 mask:
@@ -34,6 +37,7 @@ mask:
 subtitle:
   enable: true
   effect: true
+  loop: true
   sub:
     - "我, 技术, 生活与值得分享的一切"
     - "Run fast, Laugh hard, and Be kind"
@@ -222,15 +226,10 @@ theme_color:
 
 canvas_nest:
   enable: true
-  color: "0,0,255"
-  opacity: 0.7
+  color: "165,165,165"
+  opacity: 0.8
   zIndex: -1
-  count: 90
-  mobile: false
-
-fireworks:
-  enable: true
-  zIndex: 9999
+  count: 99
   mobile: false
 
 lightbox: fancybox
