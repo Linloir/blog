@@ -50,10 +50,12 @@ highlight:
   tab_replace: "  "
   wrap: true
   hljs: false
+  exclude_languages: ["mermaid"]
 prismjs:
   preprocess: true
   line_number: true
   tab_replace: "  "
+  exclude_languages: ["mermaid"]
 marked:
   prependRoot: true
   postAsset: true
@@ -105,3 +107,6 @@ theme: butterfly
 ## Docs: https://hexo.io/docs/one-command-deployment
 deploy:
   type: ""
+
+Open_Graph_meta:
+  enable: true

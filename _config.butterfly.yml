@@ -26,7 +26,10 @@ social:
   fas fa-envelope: mailto:jonathanzhang.st@gmail.com || Email
 
 index_img: /img/index.jpg
-footer_img: true
+footer_img: transparent
+
+mask:
+  footer: false
 
 subtitle:
   enable: true
@@ -40,7 +43,7 @@ cover:
   index_enable: false
   aside_enable: false
   archives_enable: false
-  default_cover: /img/index.jpg
+  default_cover: /img/cover.jpg
 
 index_post_content:
   method: 3
@@ -171,9 +174,80 @@ readmode: true
 darkmode:
   enable: true
   button: true
+  autoChangeMode: 2
+  start: 0
+  end: 0
 
 rightside_scroll_percent: false
 
 anchor:
   auto_update: true
   click_to_scroll: true
+
+wordcount:
+  enable: true
+  post_wordcount: true
+  min2read: true
+  total_wordcount: true
+
+math:
+  use: katex
+  per_page: true
+  hide_scrollbar: false
+
+markdown:
+  plugins:
+    - '@renbaoshuo/markdown-it-katex'
+
+share:
+  use: sharejs
+
+sharejs:
+  sites: facebook,twitter,wechat,weibo,qq
+
+comments:
+  use: 
+
+preloader:
+  enable: true
+  source: 2
+  pace_css_url: /css/minimal.css
+
+pjax:
+  enable: true
+
+theme_color:
+  enable: true
+  scrollbar_color: "rgba(0, 0, 0, 0.5)"
+
+canvas_nest:
+  enable: true
+  color: "0,0,255"
+  opacity: 0.7
+  zIndex: -1
+  count: 90
+  mobile: false
+
+fireworks:
+  enable: true
+  zIndex: 9999
+  mobile: false
+
+lightbox: fancybox
+
+mermaid:
+  enable: true
+  code_write: true
+  theme:
+    light: default
+    dark: dark
+
+snackbar:
+  enable: true
+  position: top-center
+
+instantpage: true
+
+pangu:
+  enable: true
+  field: post
