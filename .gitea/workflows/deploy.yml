@@ -40,8 +40,8 @@ jobs:
         uses: https://github.com/stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Auto deploy pages"
-          commit_user_name: "Gitea-Actions[bot]"
-          commit_user_email: "41898282+gitea-actions[bot]@users.noreply.gitea.com"
+          commit_user_name: "Linloir"
+          commit_user_email: "3145078758@qq.com"
           branch: publish
           commit_options: "--no-verify"
       - name: Call API to Update Caddy
