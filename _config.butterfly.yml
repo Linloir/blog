@@ -181,6 +181,7 @@ darkmode:
   autoChangeMode: 1
   start: 0
   end: 0
+display_mode: dark
 
 rightside_scroll_percent: false
 
