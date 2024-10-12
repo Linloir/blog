@@ -178,7 +178,7 @@ readmode: true
 darkmode:
   enable: true
   button: true
-  autoChangeMode: 2
+  autoChangeMode: 1
   start: 0
   end: 0
 
