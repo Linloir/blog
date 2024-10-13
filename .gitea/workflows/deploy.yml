@@ -48,3 +48,29 @@ jobs:
           token: "${{ secrets.TOKEN }}"
       - name: Call API to Update Caddy
         run: curl https://upd.linloir.cn/update/blog.linloir.gitea.linloir.cn
+      - name: Send mail On Success
+        if: success()
+        uses: https://github.com/dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.qq.com
+          server_port: 465
+          secure: true
+          username: "${{ secrets.QQ_SMTP_USERNAME }}"
+          password: "${{ secrets.QQ_SMTP_TOKEN }}"
+          subject: 博客部署成功
+          to: 314507875@qq.com
+          from: Gitea Actions
+          body: 博客自动化部署执行成功, 前往 https://blog.linloir.cn 查看
+      - name: Send mail On Fail
+        if: failure()
+        uses: https://github.com/dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.qq.com
+          server_port: 465
+          secure: true
+          username: "${{ secrets.QQ_SMTP_USERNAME }}"
+          password: "${{ secrets.QQ_SMTP_TOKEN }}"
+          subject: 博客部署失败
+          to: 314507875@qq.com
+          from: Gitea Actions
+          body: 博客自动化部署执行失败, 前往 ${{ gitea.server_url }}/${{ gitea.repostiory }}/actions/runs/${{ gitea.run_id }} 查看执行日志
