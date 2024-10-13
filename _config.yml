@@ -40,7 +40,7 @@ external_link:
   exclude: ""
 filename_case: 0
 render_drafts: false
-post_asset_folder: true
+post_asset_folder: false
 relative_link: false
 future: true
 syntax_highlighter: highlight.js
@@ -58,7 +58,7 @@ prismjs:
   exclude_languages: ["mermaid"]
 marked:
   prependRoot: true
-  postAsset: true
+  postAsset: false
 
 # Home page setting
 # path: Root path for your blogs index page. (default = '')
@@ -96,6 +96,7 @@ pagination_dir: page
 ## include:/exclude: options only apply to the 'source/' folder
 include:
 exclude:
+  - _local/**/*
 ignore:
 
 # Extensions

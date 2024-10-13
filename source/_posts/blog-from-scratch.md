@@ -11,21 +11,24 @@ categories:
 
 简单来说，方案分为了几个主要的部分：
 
-1. 公网访问使用了可行性较高的 **光猫桥接路由器拨号同时获取 IPv4 大内网和 IPv6 公网 /64 地址** 方案
-2. DNS 解析采用了 **MacMini 上部署的 [ddns-go](https://github.com/jeessy2/ddns-go)** 实现
-3. v6 / v4 双栈访问采用了 **[Cloudflare](https://cloudflare.com) DNS Proxy** 通过 Cloudflare 的代理回源的方式实现
-4. 80 / 443 端口封禁规避同样使用的是 **Cloudflare 回源指定端口** 的能力
-5. 博客源代码使用 **Gitea 仓库存储 + Actions 编译自动化部署** 实现
-6. Gitea 仓库 **直接在 Nas 上通过 Docker Compose 部署**
-7. 博客公网访问采取 **[Caddy](https://github.com/caddyserver/caddy) 反向代理** 方案，通过 **[caddy-git](https://github.com/greenpau/caddy-git) 插件实现 webhook 更新本地 git 仓库并用 fileserver 代理仓库目录** 实现网站内容更新，由于 Nas 性能羸弱，Caddy 服务部署在 MacMini 上
-8. TLS 采用 **[caddy-dns](https://github.com/caddy-dns/cloudflare) 插件实现，用 Cloudflare token 实现 dns 验证，Caddy 自动部署证书**
-9. Gitea Actions **容器化部署在 MacMini 端，用本地链接访问 Nas 上的 Gitea 服务**，减少 Cloudflare 代理流量和延迟
-10. 博客自动化部署 Actions 采用 **Main 分支 Checkout - 环境配置 - 文件编译、拷贝、暂存 - Publish 分支 Checkout - 文件覆盖 - Commit 提交 - 触发 Caddy-git 更新 Webhook** 链路
+1. 根据 [在 NAS 上部署自己的 Gitea 服务，无需公网服务器](https://blog.linloir.cn/2024/10/13/host-git-at-home/) 方案打通外网到家用 NAS / MacMini 的链路
+2. 采用 Git 仓库 main 分支存放源码 + Gitea Actions 编译至 publish 分支实现源码及制品存储
+3. 使用 [caddy-git](https://github.com/greenpau/caddy-git) 插件实现拉取 Git 仓库 publish 分支并作为 fileserver 由 Caddy 反向代理
 
 全方案的拓扑图如下
 
 其中红色线条为 HTTP 流量，蓝色线条为 DDNS-GO 流量，紫色线条为本地或 v6 直连的 ssh TCP 流量
 
-![blog_topology](blog_topology.png)
+![blog_topology](/img/blog-from-scratch/blog_topology.png)
 
-后面有空再慢慢翔实
+---
+
+## 环境准备
+
+在配博客之前，我是先配好了 Nas 上的 Gitea 服务，可以参考 [在 NAS 上部署自己的 Gitea 服务，无需公网服务器](https://blog.linloir.cn/2024/10/13/host-git-at-home/) 这一篇博客来准备基本的网络环境和 Gitea 服务。
+
+(也就是说，我是先搭好了 Gitea，然后实在不知道能拿干点什么，才决定把博客迁移回来的。有点为了醋包饺子的感觉哈哈，不过现在博客全部内容都运行在自己本地感觉还是颇有成就感的)
+
+## 仓库配置
+
+待后面补充~
