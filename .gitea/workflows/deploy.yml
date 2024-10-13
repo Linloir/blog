@@ -26,7 +26,7 @@ jobs:
           subject: 博客部署启动
           to: 3145078758@qq.com
           from: Gitea Actions
-          body: 博客自动化部署开始执行, 前往 ${{ gitea.server_url }}/${{ gitea.repostiory }}/actions/runs/${{ gitea.run_id }} 查看执行日志
+          body: 博客自动化部署开始执行, 前往 ${{ gitea.server_url }}/Linloir/blog/actions/runs/${{ gitea.run_id }} 查看执行日志
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Node.js
@@ -86,4 +86,4 @@ jobs:
           subject: 博客部署失败
           to: 3145078758@qq.com
           from: Gitea Actions
-          body: 博客自动化部署执行失败, 前往 ${{ gitea.server_url }}/${{ gitea.repostiory }}/actions/runs/${{ gitea.run_id }} 查看执行日志
+          body: 博客自动化部署执行失败, 前往 ${{ gitea.server_url }}/Linloir/blog/actions/runs/${{ gitea.run_id }} 查看执行日志
