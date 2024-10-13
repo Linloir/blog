@@ -50,7 +50,7 @@ cover:
   default_cover: /img/cover.jpg
 
 index_post_content:
-  method: 3
+  method: 2
   length: 500
 
 toc:
