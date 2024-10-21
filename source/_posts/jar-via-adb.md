@@ -46,7 +46,7 @@ categories:
 
 这时候都感觉仿佛只能用最最丑陋的下策了 —— 装一个 apk 包然后用 adb 拉起来然后走 socket 通信去执行 HTTP 请求。但是这样的方案，在自动化工程里面几乎是不可接受的，比如，光是自动化安装包这个环节就有各种坑可以踩，就算手动装也有不小的工作量；同时，call 起 apk 的过程也可能影响前台的 app。总之，这个方案一定是利大于弊的，因此也就没有第一时间去做尝试，而是继续去寻找可行的方案
 
-经过同事点拨，突然想到，平常自动化测试用到的 `openatx/uiautomator` 这个包，它本质上就是个 python 包装的反向代理，使得电脑端通过 python API 和手机侧的 server 通信，再把请求转换成 uiautomator 的指令加以执行。那么既然 `openatx/uiautomator` 是这样的 server-client 架构，那它肯定在手机上也跑了个 server 服务吧，这个服务之前有注意到就是一个 `u2.jar` 文件，所以应该意味着，我应该也可以写一个 Java 程序然后想办法在安卓端跑起来
+经过同事点拨，突然想到，平常自动化测试用到的 `openatx/uiautomator2` 这个包，它本质上就是个 python 包装的反向代理，使得电脑端通过 python API 和手机侧的 server 通信，再把请求转换成 uiautomator 的指令加以执行。那么既然 `openatx/uiautomator2` 是这样的 server-client 架构，那它肯定在手机上也跑了个 server 服务吧，这个服务之前有注意到就是一个 `u2.jar` 文件，所以应该意味着，我应该也可以写一个 Java 程序然后想办法在安卓端跑起来
 
 然后就开始了后文中试图让 Java 能在 adb shell 中跑起来的各种尝试...
 
