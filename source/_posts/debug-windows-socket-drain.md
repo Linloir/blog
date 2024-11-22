@@ -23,7 +23,7 @@ categories:
 由于报错信息只有一行，也只能从这个信息来入手。搜索引擎检索得到如下内容：
 
 - StackOverflow: [How do I fix the error "Only one usage of each socket address (protocol/network address/port) is normally permitted"?](https://stackoverflow.com/questions/14654998/how-do-i-fix-the-error-only-one-usage-of-each-socket-address-protocol-network)：文中指出，这个问题可能由多次 `listen` 同一端口引起，阅读提问者提供的代码确实有此问题
-- StackOverflow: [HttpClient: Only one usage of each socket address (protocol/network address/port) is normally permitted](https://stackoverflow.com/questions/26428827/httpclient-only-one-usage-of-each-socket-address-protocol-network-address-port)：*More likely, you are probably posting HTTP requests too often, and maybe not fully consuming the responses, which would prevent ASP from pooling and reusing connections and thus encountering port exhaustion over time.*，该回答指出如果连接请求过于频繁、没有正确关闭，可能会导致端口耗尽
+- StackOverflow: [HttpClient: Only one usage of each socket address (protocol/network address/port) is normally permitted](https://stackoverflow.com/questions/26428827/httpclient-only-one-usage-of-each-socket-address-protocol-network-address-port)：*More likely, you are probably posting HTTP requests too often, and maybe not fully consuming the responses, which would prevent ASP from pooling and reusing connections and thus encountering port exhaustion over time*，该回答指出如果连接请求过于频繁、没有正确关闭，可能会导致端口耗尽
 
 由于此前宿主机并没有暴露出该问题，优先考虑并不是发起请求及接收请求的 client 及 wda 侧的问题，即第一篇文章中提到的可能，而是从宿主机上的 tcp 连接状况入手来进一步分析这个问题，于是主要的关注点转向如下方面：
 
