@@ -71,7 +71,7 @@ usbmuxd 服务在 Linux 和 Windows 上的表现并不相同，在 Linux 上，�
 
 先关注第一个问题，通过检索搜索引擎 *windows dynamic port range* 可以检索到如下文档：
 
-[The default dynamic port range for TCP/IP has changed since Windows Vista and in Windows Server 2008](https://learn.microsoft.com/en-us/troubleshoot/windows-server/networking/default-dynamic-port-range-tcpip-chang)：*To comply with Internet Assigned Numbers Authority (IANA) recommendations, Microsoft has increased the dynamic client port range for outgoing connections in Windows Vista and Windows Server 2008. The new default start port is 49152, and the new default end port is 65535.*，也即 Windows 上的默认动态端口范围自 Windows Server 2008 开始，默认从 49152 开始到 65535，一共 16384 个，同时使用 `netsh int ipv4 show dynamicport tcp` 可以查看实际配置的值
+[The default dynamic port range for TCP/IP has changed since Windows Vista and in Windows Server 2008](https://learn.microsoft.com/en-us/troubleshoot/windows-server/networking/default-dynamic-port-range-tcpip-chang)：*To comply with Internet Assigned Numbers Authority (IANA) recommendations, Microsoft has increased the dynamic client port range for outgoing connections in Windows Vista and Windows Server 2008. The new default start port is 49152, and the new default end port is 65535*，也即 Windows 上的默认动态端口范围自 Windows Server 2008 开始，默认从 49152 开始到 65535，一共 16384 个，同时使用 `netsh int ipv4 show dynamicport tcp` 可以查看实际配置的值
 
 Powershell 执行 `netsh int ipv4 show dynamicport tcp`，确实得到 `16384` 这个结果：
 
