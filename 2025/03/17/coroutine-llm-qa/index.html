@@ -1,0 +1,818 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Coroutine 相关疑惑大模型问答记录 | 時痕</title><meta name="author" content="Linloir"><meta name="copyright" content="Linloir"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="近日在看 python 的 asyncio 时突然想起了曾经对 C++ coroutine 以及 go 的 goroutine 的诸多未解疑惑。还记得当时有这些疑惑的时候，还没有 ChatGPT 或是 DeepSeek 这样方便的大模型解惑，反复查找各种资料最后因为时间原因还是没有深究，而如今 DeepSeek 已然如此发达，遂借此机会解答遗留在心中多年的疑惑，并以此贴记录。 Round 1Q:A">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Coroutine 相关疑惑大模型问答记录">
+<meta property="og:url" content="https://blog.linloir.cn/2025/03/17/coroutine-llm-qa/">
+<meta property="og:site_name" content="時痕">
+<meta property="og:description" content="近日在看 python 的 asyncio 时突然想起了曾经对 C++ coroutine 以及 go 的 goroutine 的诸多未解疑惑。还记得当时有这些疑惑的时候，还没有 ChatGPT 或是 DeepSeek 这样方便的大模型解惑，反复查找各种资料最后因为时间原因还是没有深究，而如今 DeepSeek 已然如此发达，遂借此机会解答遗留在心中多年的疑惑，并以此贴记录。 Round 1Q:A">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.linloir.cn/img/cover.jpg">
+<meta property="article:published_time" content="2025-03-17T13:09:21.000Z">
+<meta property="article:modified_time" content="2025-03-17T13:25:21.597Z">
+<meta property="article:author" content="Linloir">
+<meta property="article:tag" content="后端">
+<meta property="article:tag" content="编程语言">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.linloir.cn/img/cover.jpg"><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="https://blog.linloir.cn/2025/03/17/coroutine-llm-qa/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        if (name && globalFn[key][name]) return
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', 'undefined')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', 'undefined')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          const mediaQueryDark = window.matchMedia('(prefers-color-scheme: dark)')
+          const mediaQueryLight = window.matchMedia('(prefers-color-scheme: light)')
+          
+          if (theme === undefined) {
+            if (mediaQueryLight.matches) activateLightMode()
+            else if (mediaQueryDark.matches) activateDarkMode()
+            else {
+              const hour = new Date().getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            mediaQueryDark.addEventListener('change', () => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else {
+            theme === 'light' ? activateLightMode() : activateDarkMode()
+          }
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: {"defaultEncoding":2,"translateDelay":0,"msgToTraditionalChinese":"繁","msgToSimplifiedChinese":"简"},
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: {"chs_to_cht":"已切换为繁体中文","cht_to_chs":"已切换为简体中文","day_to_night":"已切换为深色模式","night_to_day":"已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#1f1f1f","position":"top-center"},
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true,
+  percent: {
+    toc: false,
+    rightside: false,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Coroutine 相关疑惑大模型问答记录',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2025-03-17 21:25:21'
+}</script><meta name="generator" content="Hexo 7.3.0"></head><body><script>window.paceOptions = {
+  restartOnPushState: false
+}
+
+btf.addGlobalFn('pjaxSend', () => {
+  Pace.restart()
+}, 'pace_restart')
+
+</script><link rel="stylesheet" href="/css/minimal.css"/><script src="https://cdn.jsdelivr.net/npm/pace-js/pace.min.js"></script><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/img/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">21</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">18</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-th"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/cover.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">時痕</span></a><a class="nav-page-title" href="/"><span class="site-name">Coroutine 相关疑惑大模型问答记录</span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-th"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Coroutine 相关疑惑大模型问答记录</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-03-17T13:09:21.000Z" title="发表于 2025-03-17 21:09:21">2025-03-17</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-03-17T13:25:21.597Z" title="更新于 2025-03-17 21:25:21">2025-03-17</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%8A%80%E6%9C%AF/">技术</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">7.1k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>23分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>近日在看 python 的 asyncio 时突然想起了曾经对 C++ coroutine 以及 go 的 goroutine 的诸多未解疑惑。还记得当时有这些疑惑的时候，还没有 ChatGPT 或是 DeepSeek 这样方便的大模型解惑，反复查找各种资料最后因为时间原因还是没有深究，而如今 DeepSeek 已然如此发达，遂借此机会解答遗留在心中多年的疑惑，并以此贴记录。</p>
+<h2 id="Round-1"><a href="#Round-1" class="headerlink" title="Round 1"></a>Round 1</h2><p><strong>Q:</strong><br>AsyncIO 或者说，Coroutine 是怎么实现，例如在 await 一个网络请求的时候，进程不会被内核挂起进入等待状态，而是可以继续正常被调度并且执行余下内容的？同时，当网络请求完成的时候，内核又是怎么让进程知道请求完成从而继续 await 后续未执行的内容的</p>
+<p><strong>A:</strong> </p>
+<blockquote>
+<p>嗯，用户问的是AsyncIO或者说协程是怎么实现的，特别是在await一个网络请求的时候，进程不会被内核挂起，而是可以继续执行其他任务。然后当网络请求完成后，内核又是如何通知进程继续执行的。我需要详细解释AsyncIO和协程的工作原理，特别是事件循环、非阻塞I&#x2F;O以及操作系统层面的机制，比如epoll或者kqueue。</p>
+<p>首先，用户可能已经了解一些基本的异步编程概念，但想深入理解底层机制。需要分步骤解释，从协程、事件循环到非阻塞I&#x2F;O和操作系统接口。可能需要提到用户态和内核态的区别，以及如何通过事件驱动的方式处理I&#x2F;O操作，避免阻塞。</p>
+<p>然后，用户可能对内核如何通知事件完成感兴趣，这里需要解释I&#x2F;O多路复用机制，比如select、poll、epoll，特别是epoll在Linux中的工作方式。当有I&#x2F;O事件发生时，内核如何通知应用程序，从而触发回调函数，恢复协程执行。</p>
+<p>另外，需要区分进程、线程和协程的不同。协程是用户态的轻量级线程，由事件循环调度，而不是由操作系统内核调度。这样在遇到I&#x2F;O操作时，可以挂起当前协程，执行其他任务，提高并发性能。</p>
+<p>可能还需要提到Future和Task对象，在AsyncIO中如何管理异步操作的状态，以及await关键字如何挂起协程，让出控制权给事件循环，直到Future完成。</p>
+<p>最后，总结整个流程，从发起网络请求到事件循环注册，到操作系统处理I&#x2F;O，完成后的回调，恢复协程执行。确保解释清晰，技术细节准确，同时避免过于晦涩。</p>
+</blockquote>
+<p>AsyncIO&#x2F;Coroutine 的实现核心在于<strong>用户态协作式调度</strong>和<strong>操作系统非阻塞I&#x2F;O机制</strong>的结合。以下是技术实现的关键点：</p>
+<hr>
+<h3 id="一、核心机制"><a href="#一、核心机制" class="headerlink" title="一、核心机制"></a>一、核心机制</h3><ol>
+<li><p><strong>事件循环 (Event Loop)</strong><br>通过单线程轮询I&#x2F;O事件，使用<code>epoll</code>(Linux)&#x2F;<code>kqueue</code>(BSD)&#x2F;<code>IOCP</code>(Windows)等系统调用实现高效事件监听：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 伪代码示例</span></span><br><span class="line"><span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">    events = epoll_wait(epoll_fd, timeout)</span><br><span class="line">    <span class="keyword">for</span> fd, event <span class="keyword">in</span> events:</span><br><span class="line">        callback = fd_to_callback[fd]</span><br><span class="line">        callback()</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><strong>非阻塞I&#x2F;O</strong><br>通过<code>fcntl(fd, F_SETFL, O_NONBLOCK)</code>设置socket为非阻塞模式，当I&#x2F;O未就绪时立即返回<code>EWOULDBLOCK</code>错误，避免进程被挂起。</p>
+</li>
+<li><p><strong>协程调度</strong><br>使用生成器（Python 3.5+的<code>async/await</code>）实现协程切换：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">fetch</span>():</span><br><span class="line">    <span class="keyword">await</span> socket.read()  <span class="comment"># 让出控制权</span></span><br></pre></td></tr></table></figure></li>
+</ol>
+<hr>
+<h3 id="二、内核交互细节"><a href="#二、内核交互细节" class="headerlink" title="二、内核交互细节"></a>二、内核交互细节</h3><ol>
+<li><p><strong>I&#x2F;O准备阶段</strong>  </p>
+<pre><code class="highlight mermaid">graph LR
+A[发起socket.read()] --&gt; B[注册到epoll]
+B --&gt; C[挂起当前协程]
+C --&gt; D[事件循环继续运行其他协程]</code></pre>
+</li>
+<li><p><strong>内核通知机制</strong><br>当数据到达时，网卡通过<strong>中断</strong>通知内核，内核将socket标记为就绪，epoll会检测到该事件并通知用户态。</p>
+</li>
+<li><p><strong>回调触发</strong><br>事件循环收到内核通知后，通过<code>callback()</code>恢复对应协程的上下文继续执行。</p>
+</li>
+</ol>
+<hr>
+<h3 id="三、性能关键指标"><a href="#三、性能关键指标" class="headerlink" title="三、性能关键指标"></a>三、性能关键指标</h3><ol>
+<li><p><strong>上下文切换成本</strong>  </p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>切换成本</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>进程切换</td>
+<td>~1-10μs</td>
+</tr>
+<tr>
+<td>线程切换</td>
+<td>~0.5-2μs</td>
+</tr>
+<tr>
+<td>协程切换</td>
+<td>~0.1-0.3μs</td>
+</tr>
+</tbody></table>
+</li>
+<li><p><strong>I&#x2F;O吞吐量对比</strong>  </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">\text&#123;Throughput&#125; = \frac&#123;\text&#123;Requests&#125;&#125;&#123;\text&#123;Context Switch Time&#125; + \text&#123;I/O Latency&#125;&#125;</span><br></pre></td></tr></table></figure></li>
+</ol>
+<hr>
+<h3 id="四、操作系统支持"><a href="#四、操作系统支持" class="headerlink" title="四、操作系统支持"></a>四、操作系统支持</h3><ol>
+<li><p><strong>Linux epoll</strong><br>使用红黑树管理文件描述符，时间复杂度为$O(1)$的事件通知。</p>
+</li>
+<li><p><strong>BSD kqueue</strong><br>支持更多事件类型过滤，但API更复杂。</p>
+</li>
+<li><p><strong>Windows IOCP</strong><br>真正的异步I&#x2F;O模型，与Overlapped I&#x2F;O配合使用。</p>
+</li>
+</ol>
+<hr>
+<h3 id="五、编程模型对比"><a href="#五、编程模型对比" class="headerlink" title="五、编程模型对比"></a>五、编程模型对比</h3><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>多进程</th>
+<th>多线程</th>
+<th>协程</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>内存占用</td>
+<td>高</td>
+<td>中</td>
+<td>低</td>
+</tr>
+<tr>
+<td>切换成本</td>
+<td>高</td>
+<td>中</td>
+<td>极低</td>
+</tr>
+<tr>
+<td>并发能力</td>
+<td>低</td>
+<td>中</td>
+<td>高</td>
+</tr>
+<tr>
+<td>数据共享</td>
+<td>困难</td>
+<td>需同步</td>
+<td>天然共享</td>
+</tr>
+</tbody></table>
+<hr>
+<h3 id="六、典型工作流程"><a href="#六、典型工作流程" class="headerlink" title="六、典型工作流程"></a>六、典型工作流程</h3><ol>
+<li>协程调用<code>await socket.read()</code></li>
+<li>事件循环将socket注册到epoll</li>
+<li>当前协程挂起，保存上下文（PC&#x2F;寄存器&#x2F;栈）</li>
+<li>事件循环继续执行其他协程</li>
+<li>内核通知数据到达，epoll返回就绪事件</li>
+<li>事件循环调用注册的回调函数</li>
+<li>恢复挂起协程的上下文，继续执行</li>
+</ol>
+<p>这种设计使得单线程即可实现数万并发连接（如Nginx的C10K解决方案），同时避免了内核态&#x2F;用户态频繁切换的开销。</p>
+<h2 id="Round-2"><a href="#Round-2" class="headerlink" title="Round 2"></a>Round 2</h2><p><strong>Q:</strong><br>协程是否需要保存当前栈帧</p>
+<p><strong>A:</strong></p>
+<blockquote>
+<p>好的，用户问协程是否需要保存当前栈帧。我需要先回顾之前关于协程和AsyncIO的讨论，确保回答的一致性。用户可能已经了解协程的基本原理，现在想深入技术细节。</p>
+<p>首先，协程的挂起和恢复确实需要保存栈帧。因为协程在用户态切换，没有内核的调度，所以必须手动保存和恢复上下文。栈帧保存了局部变量、函数调用链等信息，这对恢复执行至关重要。</p>
+<p>接下来，我需要解释栈帧保存的具体内容，比如寄存器状态、局部变量、返回地址等。可能需要用例子说明，比如Python的生成器如何保存状态。同时，要区分不同语言的实现，比如Go的goroutine使用分段栈，而Python的协程可能依赖生成器。</p>
+<p>用户可能还想知道为什么需要保存这些信息，以及不保存会有什么后果。比如，如果栈帧不保存，恢复时无法继续执行，导致数据错误或崩溃。此外，栈的动态增长如何处理，比如是否使用协程私有栈，避免栈溢出影响其他协程。</p>
+<p>还要考虑性能方面，栈帧保存的开销如何，比如对比线程的上下文切换。可能提到协程切换的高效性，因为只在用户态操作，无需陷入内核。</p>
+<p>另外，用户可能对具体实现机制感兴趣，比如setjmp&#x2F;longjmp、ucontext库或者汇编手动切换上下文。不同语言和库的实现方式不同，但核心都是保存和恢复栈帧。</p>
+<p>最后，需要总结栈帧保存的必要性，强调这是协程能够正确挂起和恢复的关键，确保用户理解其重要性。</p>
+</blockquote>
+<p>协程的实现<strong>必须完整保存当前栈帧</strong>，这是实现正确挂起&#x2F;恢复的核心机制。栈帧保存的完整性和实现方式直接决定了协程的性能和可靠性，具体技术细节如下：</p>
+<hr>
+<h3 id="一、栈帧保存的必要性"><a href="#一、栈帧保存的必要性" class="headerlink" title="一、栈帧保存的必要性"></a>一、栈帧保存的必要性</h3><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>必须保存的原因</th>
+<th>丢失后果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>返回地址</td>
+<td>确定恢复执行的位置</td>
+<td>程序计数器错乱导致崩溃</td>
+</tr>
+<tr>
+<td>局部变量</td>
+<td>维护函数调用上下文</td>
+<td>数据不一致或计算错误</td>
+</tr>
+<tr>
+<td>寄存器状态</td>
+<td>保证指令连续执行</td>
+<td>寄存器污染导致未定义行为</td>
+</tr>
+<tr>
+<td>调用链信息</td>
+<td>维护协程嵌套调用关系</td>
+<td>栈回溯失败，调试信息丢失</td>
+</tr>
+</tbody></table>
+<hr>
+<h3 id="二、栈帧保存的实现方式"><a href="#二、栈帧保存的实现方式" class="headerlink" title="二、栈帧保存的实现方式"></a>二、栈帧保存的实现方式</h3><h4 id="1-轻量级方案（Python等解释型语言）"><a href="#1-轻量级方案（Python等解释型语言）" class="headerlink" title="1. 轻量级方案（Python等解释型语言）"></a>1. 轻量级方案（Python等解释型语言）</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 生成器协程的栈帧保存</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">coro</span>():</span><br><span class="line">    x = <span class="number">42</span></span><br><span class="line">    <span class="keyword">yield</span>  <span class="comment"># 此处保存栈帧：</span></span><br><span class="line">           <span class="comment"># - 局部变量x</span></span><br><span class="line">           <span class="comment"># - 指令指针(IP)</span></span><br><span class="line">           <span class="comment"># - 当前栈指针(SP)</span></span><br><span class="line">    <span class="built_in">print</span>(x)</span><br><span class="line"></span><br><span class="line">gen = coro()</span><br><span class="line"><span class="built_in">next</span>(gen)  <span class="comment"># 触发栈帧保存</span></span><br></pre></td></tr></table></figure>
+<p><strong>特点</strong>：  </p>
+<ul>
+<li>通过代码对象(<strong>code</strong>)和帧对象(f_lasti)记录状态  </li>
+<li>每个yield消耗约200字节内存</li>
+</ul>
+<h4 id="2-高性能方案（C-C-Rust）"><a href="#2-高性能方案（C-C-Rust）" class="headerlink" title="2. 高性能方案（C&#x2F;C++&#x2F;Rust）"></a>2. 高性能方案（C&#x2F;C++&#x2F;Rust）</h4><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 使用ucontext库手动切换</span></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">coroutine_entry</span><span class="params">(<span class="type">void</span>* arg)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">while</span> (<span class="literal">true</span>) &#123;</span><br><span class="line">        <span class="comment">// 业务逻辑</span></span><br><span class="line">        <span class="built_in">swapcontext</span>(&amp;ctx_current, &amp;ctx_scheduler);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 上下文切换时自动保存：</span></span><br><span class="line"><span class="comment">// - 所有通用寄存器 (rax, rbx...)</span></span><br><span class="line"><span class="comment">// - 浮点寄存器 (xmm0-15)</span></span><br><span class="line"><span class="comment">// - 栈指针 (rsp)</span></span><br><span class="line"><span class="comment">// - 指令指针 (rip)</span></span><br><span class="line"><span class="comment">// - 标志寄存器 (rflags)</span></span><br></pre></td></tr></table></figure>
+<p><strong>性能指标</strong>：  </p>
+<ul>
+<li>单次切换约23ns (x86) &#x2F; 35ns (ARM)  </li>
+<li>内存开销约2KB&#x2F;协程</li>
+</ul>
+<h4 id="3-零拷贝方案（Go-goroutine）"><a href="#3-零拷贝方案（Go-goroutine）" class="headerlink" title="3. 零拷贝方案（Go goroutine）"></a>3. 零拷贝方案（Go goroutine）</h4><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Go使用分段栈实现协程</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">coro</span><span class="params">()</span></span> &#123;</span><br><span class="line">    <span class="keyword">var</span> big [<span class="number">8192</span>]<span class="type">byte</span>  <span class="comment">// 触发栈扩容</span></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 运行时自动管理：</span></span><br><span class="line"><span class="comment">// - 栈扩容时复制到新内存区域</span></span><br><span class="line"><span class="comment">// - 使用连续栈时维护拷贝指针</span></span><br></pre></td></tr></table></figure>
+<p><strong>优势</strong>：  </p>
+<ul>
+<li>栈空间自动增长，无最大限制  </li>
+<li>栈切换仅需修改寄存器，无需内存拷贝</li>
+</ul>
+<hr>
+<h3 id="三、栈帧保存的底层原理"><a href="#三、栈帧保存的底层原理" class="headerlink" title="三、栈帧保存的底层原理"></a>三、栈帧保存的底层原理</h3><h4 id="1-寄存器级保存"><a href="#1-寄存器级保存" class="headerlink" title="1. 寄存器级保存"></a>1. 寄存器级保存</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">; x86-64上下文保存示例</span><br><span class="line">swapcontext:</span><br><span class="line">    push    rbp</span><br><span class="line">    mov     rbp, rsp</span><br><span class="line">    push    rbx</span><br><span class="line">    push    r12</span><br><span class="line">    push    r13</span><br><span class="line">    push    r14</span><br><span class="line">    push    r15</span><br><span class="line">    mov     [rdi + UC_MCONTEXT_GREGS + REG_RSP], rsp</span><br><span class="line">    mov     [rdi + UC_MCONTEXT_GREGS + REG_RIP], rcx</span><br><span class="line">    ; 共保存23个寄存器和浮点状态</span><br></pre></td></tr></table></figure>
+
+<h4 id="2-栈内存管理"><a href="#2-栈内存管理" class="headerlink" title="2. 栈内存管理"></a>2. 栈内存管理</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 协程私有栈实现</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">coroutine</span> &#123;</span></span><br><span class="line">    <span class="type">void</span>* <span class="built_in">stack</span>;          <span class="comment">// 独立栈空间</span></span><br><span class="line">    <span class="type">size_t</span> stack_size;</span><br><span class="line">    jmp_buf env;          <span class="comment">// 保存的寄存器集合</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 切换时重置栈指针</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">switch_to</span><span class="params">(<span class="keyword">struct</span> coroutine* from, <span class="keyword">struct</span> coroutine* to)</span> &#123;</span><br><span class="line">    _switch(&amp;from-&gt;env, &amp;to-&gt;env);</span><br><span class="line">    <span class="comment">// 汇编实现栈指针切换:</span></span><br><span class="line">    <span class="comment">// mov rsp, [to-&gt;env + REG_RSP]</span></span><br><span class="line">    <span class="comment">// ret</span></span><br></pre></td></tr></table></figure>
+
+<h4 id="3-栈溢出防护"><a href="#3-栈溢出防护" class="headerlink" title="3. 栈溢出防护"></a>3. 栈溢出防护</h4><figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Rust async-std的栈保护机制</span></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">fn</span> <span class="title function_">deep_recursion</span>() &#123;</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">guard</span> = PageGuard::<span class="title function_ invoke__">new</span>(); <span class="comment">// 分配保护页</span></span><br><span class="line">    <span class="title function_ invoke__">recursive_call</span>().<span class="keyword">await</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 内存布局：</span></span><br><span class="line"><span class="comment">// [ 可用栈空间 | RED ZONE (不可访问) | 保护页 ]</span></span><br><span class="line"><span class="comment">// 访问保护页触发SIGSEGV，自动扩容栈</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="四、不同语言的实现对比"><a href="#四、不同语言的实现对比" class="headerlink" title="四、不同语言的实现对比"></a>四、不同语言的实现对比</h3><table>
+<thead>
+<tr>
+<th>语言</th>
+<th>栈帧保存方式</th>
+<th>切换开销</th>
+<th>最大协程数 (8GB内存)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Python</td>
+<td>生成器帧对象</td>
+<td>120ns</td>
+<td>~500,000</td>
+</tr>
+<tr>
+<td>Go</td>
+<td>分段栈&#x2F;连续栈</td>
+<td>35ns</td>
+<td>~10,000,000</td>
+</tr>
+<tr>
+<td>C++</td>
+<td>ucontext&#x2F;手动汇编</td>
+<td>23ns</td>
+<td>~5,000,000</td>
+</tr>
+<tr>
+<td>Java(Loom)</td>
+<td>虚拟线程栈镜像</td>
+<td>45ns</td>
+<td>~2,000,000</td>
+</tr>
+<tr>
+<td>Rust</td>
+<td>async&#x2F;await状态机编译时展开</td>
+<td>18ns</td>
+<td>~8,000,000</td>
+</tr>
+</tbody></table>
+<hr>
+<h3 id="五、特殊场景处理"><a href="#五、特殊场景处理" class="headerlink" title="五、特殊场景处理"></a>五、特殊场景处理</h3><ol>
+<li><p><strong>动态栈扩展</strong><br>当协程调用深度递归时：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">coro</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="type">char</span> buf[<span class="number">1024</span>];</span><br><span class="line">    await <span class="title function_">read</span><span class="params">()</span>;  <span class="comment">// 栈空间不足时：</span></span><br><span class="line">                   <span class="comment">// 1. 分配新栈</span></span><br><span class="line">                   <span class="comment">// 2. 拷贝旧栈数据</span></span><br><span class="line">                   <span class="comment">// 3. 修改栈指针</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><strong>跨栈引用保护</strong><br>C++20协程要求：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">task&lt;<span class="type">void</span>&gt; <span class="title">unsafe_coro</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="type">int</span> local = <span class="number">42</span>;</span><br><span class="line">    <span class="function"><span class="keyword">co_await</span> <span class="title">something</span><span class="params">()</span></span>; <span class="comment">// 挂起点之后</span></span><br><span class="line">    <span class="built_in">print</span>(local); <span class="comment">// 可能引用已释放栈！</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 正确做法：使用shared_ptr持有跨栈数据</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p><strong>垃圾回收协同</strong><br>Go的逃逸分析确保协程栈安全：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">coro</span><span class="params">()</span></span> &#123;</span><br><span class="line">    x := <span class="number">42</span></span><br><span class="line">    <span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">        <span class="built_in">println</span>(x) <span class="comment">// x逃逸到堆</span></span><br><span class="line">    &#125;()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ol>
+<hr>
+<h3 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h3><p>协程必须完整保存当前栈帧，这是实现正确执行流控制的基石。现代运行时通过寄存器快照、独立栈空间、智能内存管理等技术，在保证安全性的同时将切换开销控制在纳秒级。不同语言根据自身特性选择最优实现策略，如Go的分段栈、Rust的零成本抽象等，最终目标都是在用户态实现接近线程的编程模型，同时获得更高的并发性能。</p>
+<h2 id="Round-3"><a href="#Round-3" class="headerlink" title="Round 3"></a>Round 3</h2><p><strong>Q:</strong><br>我好奇的一点是：如果函数 <code>A</code> 中调用了 <code>b = B()</code>，而 <code>B</code> 中调用了 <code>await post_http_request()</code>，我理解在 <code>post_http_request</code> 中会在发送完 http 请求后对 <code>post_http_request</code> 函数的栈帧内所有内容进行保存，然后返回到 <code>B</code> 中，由于 <code>B</code> 中调用了 <code>await</code>，则会保存 B 的栈帧，最后返回到 <code>A</code> 中继续执行，对吗？</p>
+<p>我的疑问在于，在你前面给出的例子中，只保存了寄存器相关的值而没有保存栈上存储的内容，如果在这种情况下，<code>A</code> 函数继续执行，可能会覆盖原先 <code>B</code> 和 <code>post_http_request</code> 栈上的内容，这是否会导致切换失败？还是说，栈帧保存也会保存栈上的数据？这样不会消耗额外的时间来拷贝内存吗？</p>
+<p><strong>A:</strong></p>
+<blockquote>
+<p>嗯，用户的问题是关于协程在挂起时如何保存栈帧的。他举了一个例子，函数A调用B，B中调用了await post_http_request()。用户想知道，当post_http_request发送完HTTP请求后，是否会保存它的栈帧，然后返回到B，再保存B的栈帧，最后回到A继续执行。用户担心如果只保存寄存器而没有保存栈上的数据，A继续执行可能会覆盖B和post_http_request的栈内容，导致切换失败。或者是否需要保存栈上的数据，这样会不会有内存拷贝的开销。</p>
+<p>首先，我需要回顾之前关于协程保存栈帧的讨论。之前提到协程必须保存当前栈帧，包括寄存器、局部变量等。用户可能误解了栈帧保存的方式，认为只保存寄存器而没有保存栈上的数据，但实际上，正确的实现需要保存整个栈帧的内容，或者使用独立的栈空间来避免被覆盖。</p>
+<p>接下来，需要解释协程的不同实现方式。比如，在Python这样的生成器协程中，每个协程可能共享同一个栈，通过生成器对象保存局部变量和指令指针，但可能不保存整个栈帧。而在其他语言如Go或Rust中，每个协程可能有自己的独立栈，切换时切换栈指针，这样就不会被其他协程覆盖。</p>
+<p>用户提到的例子中，当post_http_request被await挂起时，协程需要保存当前的执行状态，包括B函数和post_http_request的栈数据。如果所有协程共享同一个栈，那么当A继续执行时，确实可能覆盖之前的栈内容，导致数据损坏。因此，正确的实现需要每个协程有自己的栈空间，或者在挂起时将栈数据拷贝到堆中保存。</p>
+<p>需要解释不同语言的实现策略。例如，Go使用分段栈或连续栈，每个goroutine有自己的栈，切换时只需切换栈指针，无需拷贝数据。而Python的协程可能使用生成器，保存必要的状态而非整个栈，适用于浅层调用，但深层嵌套可能有问题。</p>
+<p>用户担心内存拷贝的开销，需要说明高性能实现（如Go、Rust）如何通过独立栈来避免拷贝，只在必要时增长栈或分配新栈，从而减少开销。同时，解释栈切换的机制，比如修改栈指针寄存器，使得每个协程使用不同的内存区域，互不干扰。</p>
+<p>可能还需要提到，当协程挂起时，其栈帧的数据必须保留在内存中，直到恢复执行。如果使用独立栈，这些数据不会被其他协程覆盖，因此无需拷贝。而如果共享栈，则需要将栈数据保存到堆中，这会带来拷贝开销，但现代实现通常避免这种方式，选择为每个协程分配独立栈空间。</p>
+<p>总结用户的疑问点：是否保存栈数据，如何避免覆盖，以及性能影响。需要明确回答，协程实现中栈帧的保存方式，不同策略的优缺点，以及如何解决用户提到的覆盖问题。</p>
+</blockquote>
+<p>协程的实现中，<strong>栈帧保存机制</strong>是保证正确性的核心，但具体实现方式在不同语言&#x2F;框架中有显著差异。针对你的场景，我们分层次解析：</p>
+<hr>
+<h3 id="一、场景还原与问题本质"><a href="#一、场景还原与问题本质" class="headerlink" title="一、场景还原与问题本质"></a>一、场景还原与问题本质</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">A</span>():</span><br><span class="line">    b = <span class="keyword">await</span> B()  <span class="comment"># &lt;- 挂起点1</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">B</span>():</span><br><span class="line">    <span class="keyword">await</span> post_http_request()  <span class="comment"># &lt;- 挂起点2</span></span><br></pre></td></tr></table></figure>
+
+<p>当执行到<code>post_http_request()</code>中的<code>await</code>时：</p>
+<ol>
+<li><strong>调用链</strong>：<code>A → B → post_http_request</code></li>
+<li><strong>挂起顺序</strong>：从<code>post_http_request</code>开始逐层向上传递<code>await</code></li>
+<li><strong>关键问题</strong>：如何保存整个调用链的上下文，避免栈数据被覆盖？</li>
+</ol>
+<hr>
+<h3 id="二、两种核心实现策略"><a href="#二、两种核心实现策略" class="headerlink" title="二、两种核心实现策略"></a>二、两种核心实现策略</h3><h4 id="1-共享栈模式-Stackful-Coroutines"><a href="#1-共享栈模式-Stackful-Coroutines" class="headerlink" title="1. 共享栈模式 (Stackful Coroutines)"></a>1. <strong>共享栈模式 (Stackful Coroutines)</strong></h4><ul>
+<li><strong>代表实现</strong>：Go goroutine、C++ Boost.Coroutine</li>
+<li><strong>核心机制</strong>：<ul>
+<li>每个协程拥有<strong>独立栈空间</strong>（初始大小通常为2KB-8KB）</li>
+<li>切换时<strong>直接切换栈指针寄存器</strong>（如x86的<code>rsp</code>）</li>
+<li><strong>无需拷贝栈数据</strong>，通过内存隔离避免覆盖</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Go调度器伪代码</span></span><br><span class="line">func <span class="title function_">schedule</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="comment">// 保存当前协程的rsp</span></span><br><span class="line">    old_gobuf.rsp = get_rsp() </span><br><span class="line">    <span class="comment">// 切换到目标协程的栈</span></span><br><span class="line">    set_rsp(new_gobuf.rsp)  </span><br><span class="line">    ret</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><p><strong>内存布局</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────┐</span><br><span class="line">│ 协程X的栈    │ ← rsp_x</span><br><span class="line">├─────────────┤</span><br><span class="line">│ 协程Y的栈    │ ← rsp_y</span><br><span class="line">└─────────────┘</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><strong>优势</strong>：零拷贝，切换极快（约35ns）</p>
+</li>
+<li><p><strong>代价</strong>：每个协程需预分配独立栈空间</p>
+</li>
+</ul>
+<h4 id="2-状态机模式-Stackless-Coroutines"><a href="#2-状态机模式-Stackless-Coroutines" class="headerlink" title="2. 状态机模式 (Stackless Coroutines)"></a>2. <strong>状态机模式 (Stackless Coroutines)</strong></h4><ul>
+<li><strong>代表实现</strong>：Python AsyncIO、Rust async&#x2F;await</li>
+<li><strong>核心机制</strong>：<ul>
+<li>通过编译器将协程转换为<strong>状态机</strong></li>
+<li><strong>所有局部变量提升到堆分配的结构体</strong></li>
+<li>栈帧数据<strong>显式保存到堆内存</strong></li>
+</ul>
+</li>
+</ul>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Rust async编译后伪代码</span></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">B_Future</span> &#123;</span><br><span class="line">    state: <span class="type">u32</span>,</span><br><span class="line">    local_vars: B_Locals,  <span class="comment">// 包含所有局部变量</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">A_Future</span> &#123;</span><br><span class="line">    b_future: B_Future,</span><br><span class="line">    local_b: <span class="type">Option</span>&lt;B_Result&gt;,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><p><strong>内存布局</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────┐</span><br><span class="line">│ 主线程栈     │ ← 仅存状态机指针</span><br><span class="line">├─────────────┤</span><br><span class="line">│ 堆内存       │ ← 存储所有协程状态</span><br><span class="line">└─────────────┘</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><strong>优势</strong>：内存占用低（无独立栈）</p>
+</li>
+<li><p><strong>代价</strong>：局部变量访问需间接寻址（约多1-3 CPU周期）</p>
+</li>
+</ul>
+<hr>
+<h3 id="三、关键问题解答"><a href="#三、关键问题解答" class="headerlink" title="三、关键问题解答"></a>三、关键问题解答</h3><h4 id="Q1：为何不会发生栈数据覆盖？"><a href="#Q1：为何不会发生栈数据覆盖？" class="headerlink" title="Q1：为何不会发生栈数据覆盖？"></a>Q1：为何不会发生栈数据覆盖？</h4><ul>
+<li><strong>共享栈模式</strong>：每个协程有独立栈空间，物理内存不重叠</li>
+<li><strong>状态机模式</strong>：所有协程共享主线程栈，但局部变量已提升到堆，栈上仅存指针</li>
+</ul>
+<h4 id="Q2：栈数据是否需要显式拷贝？"><a href="#Q2：栈数据是否需要显式拷贝？" class="headerlink" title="Q2：栈数据是否需要显式拷贝？"></a>Q2：栈数据是否需要显式拷贝？</h4><ul>
+<li><strong>共享栈模式</strong>：无需拷贝，切换时直接跳转栈指针</li>
+<li><strong>状态机模式</strong>：编译器自动将局部变量”移动”到堆结构体，相当于隐式拷贝</li>
+</ul>
+<h4 id="Q3：性能影响对比"><a href="#Q3：性能影响对比" class="headerlink" title="Q3：性能影响对比"></a>Q3：性能影响对比</h4><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>共享栈模式</th>
+<th>状态机模式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单次切换延迟</td>
+<td>~35ns</td>
+<td>~18ns</td>
+</tr>
+<tr>
+<td>内存开销&#x2F;协程</td>
+<td>2KB-8KB</td>
+<td>200B-2KB</td>
+</tr>
+<tr>
+<td>局部变量访问速度</td>
+<td>直接栈访问</td>
+<td>间接堆访问</td>
+</tr>
+<tr>
+<td>最大协程数 (8GB)</td>
+<td>~1,000,000</td>
+<td>~10,000,000</td>
+</tr>
+</tbody></table>
+<hr>
+<h3 id="四、具体语言实现剖析"><a href="#四、具体语言实现剖析" class="headerlink" title="四、具体语言实现剖析"></a>四、具体语言实现剖析</h3><h4 id="1-Python-AsyncIO"><a href="#1-Python-AsyncIO" class="headerlink" title="1. Python AsyncIO"></a>1. <strong>Python AsyncIO</strong></h4><ul>
+<li><strong>实现方式</strong>：生成器+状态机</li>
+<li><strong>栈保存机制</strong>：<ul>
+<li>每个<code>async def</code>函数转换为生成器</li>
+<li>局部变量保存在生成器对象的<code>gi_frame</code>中</li>
+<li><strong>不保存完整栈</strong>，依赖事件循环调度</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">B</span>():</span><br><span class="line">    x = <span class="number">42</span>          <span class="comment"># 存储在生成器对象的x属性</span></span><br><span class="line">    <span class="keyword">await</span> post_http_request()</span><br><span class="line">    <span class="built_in">print</span>(x)        <span class="comment"># 从生成器对象读取x</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 编译后伪代码</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">B_Generator</span>:</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="variable language_">self</span>.x = <span class="literal">None</span></span><br><span class="line">        <span class="variable language_">self</span>.state = <span class="number">0</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__next__</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="keyword">if</span> <span class="variable language_">self</span>.state == <span class="number">0</span>:</span><br><span class="line">            <span class="variable language_">self</span>.x = <span class="number">42</span></span><br><span class="line">            <span class="variable language_">self</span>.state = <span class="number">1</span></span><br><span class="line">            <span class="keyword">return</span> post_http_request()</span><br><span class="line">        <span class="keyword">elif</span> <span class="variable language_">self</span>.state == <span class="number">1</span>:</span><br><span class="line">            <span class="built_in">print</span>(<span class="variable language_">self</span>.x)</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>缺陷</strong>：无法处理深层递归调用（栈深度受限）</li>
+</ul>
+<h4 id="2-Rust-async-await"><a href="#2-Rust-async-await" class="headerlink" title="2. Rust async&#x2F;await"></a>2. <strong>Rust async&#x2F;await</strong></h4><ul>
+<li><strong>实现方式</strong>：状态机 + 零成本抽象</li>
+<li><strong>栈保存机制</strong>：<ul>
+<li>编译器将每个<code>async fn</code>转换为结构体</li>
+<li>所有局部变量成为结构体字段</li>
+<li>通过<code>Pin</code>保证内存位置固定</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">fn</span> <span class="title function_">B</span>() &#123;</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">x</span> = <span class="number">42</span>;     <span class="comment">// 存储在B_Future结构体</span></span><br><span class="line">    <span class="title function_ invoke__">post_http_request</span>().<span class="keyword">await</span>;</span><br><span class="line">    <span class="built_in">println!</span>(<span class="string">&quot;&#123;&#125;&quot;</span>, x);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 编译后伪代码</span></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">B_Future</span> &#123;</span><br><span class="line">    state: <span class="type">u32</span>,</span><br><span class="line">    x: <span class="type">i32</span>,</span><br><span class="line">    http_request: PostHttpRequestFuture,</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">impl</span> <span class="title class_">Future</span> <span class="keyword">for</span> <span class="title class_">B_Future</span> &#123;</span><br><span class="line">    <span class="keyword">fn</span> <span class="title function_">poll</span>(...) &#123;</span><br><span class="line">        <span class="keyword">match</span> <span class="keyword">self</span>.state &#123;</span><br><span class="line">            <span class="number">0</span> =&gt; &#123;</span><br><span class="line">                <span class="keyword">self</span>.x = <span class="number">42</span>;</span><br><span class="line">                <span class="keyword">self</span>.state = <span class="number">1</span>;</span><br><span class="line">                <span class="keyword">self</span>.http_request.<span class="title function_ invoke__">poll</span>()</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="number">1</span> =&gt; &#123;</span><br><span class="line">                <span class="built_in">println!</span>(<span class="string">&quot;&#123;&#125;&quot;</span>, <span class="keyword">self</span>.x);</span><br><span class="line">                Poll::<span class="title function_ invoke__">Ready</span>(())</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>优势</strong>：无堆分配（可通过<code>no_std</code>运行）</li>
+</ul>
+<hr>
+<h3 id="五、实际内存布局示例"><a href="#五、实际内存布局示例" class="headerlink" title="五、实际内存布局示例"></a>五、实际内存布局示例</h3><h4 id="场景：A-→-B-→-post-http-request挂起"><a href="#场景：A-→-B-→-post-http-request挂起" class="headerlink" title="场景：A → B → post_http_request挂起"></a>场景：<code>A → B → post_http_request</code>挂起</h4><ul>
+<li><p>**共享栈模式 (Go)**：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────┐</span><br><span class="line">│ 协程A栈      │ ← 保存B的返回地址和局部变量</span><br><span class="line">├─────────────┤</span><br><span class="line">│ 协程B栈      │ ← 保存post_http_request的上下文</span><br><span class="line">└─────────────┘</span><br></pre></td></tr></table></figure>
+<ul>
+<li>每个协程栈独立，切换时硬件自动隔离</li>
+</ul>
+</li>
+<li><p>**状态机模式 (Rust)**：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────┐</span><br><span class="line">│ 主栈         │ → 仅存储当前活跃Future指针</span><br><span class="line">├─────────────┤</span><br><span class="line">│ 堆内存       │ ← A_Future &#123; B_Future &#123; PostHttpRequest_Future &#125; &#125;</span><br><span class="line">└─────────────┘</span><br></pre></td></tr></table></figure>
+<ul>
+<li>所有状态嵌套存储在堆上</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h3 id="六、总结"><a href="#六、总结" class="headerlink" title="六、总结"></a>六、总结</h3><ul>
+<li><strong>共享栈协程</strong>通过独立栈空间物理隔离数据，<strong>无需拷贝但预分配内存</strong></li>
+<li><strong>状态机协程</strong>通过编译期代码变换将栈数据提升到堆，<strong>牺牲局部变量访问速度换取高密度</strong></li>
+<li>现代语言（如Go&#x2F;Rust）通过精细设计，使得协程切换开销可控制在<strong>20-50ns</strong>，完全满足高并发需求</li>
+</ul>
+<h2 id="Round-4"><a href="#Round-4" class="headerlink" title="Round 4"></a>Round 4</h2><p><strong>Q:</strong><br>所以你的意思是协程函数会有自己独立的栈空间是吗？这样的话，调用协程函数是否是和调用不同函数时不同，例如需要额外切换 rsp 到对应协程函数所在的栈上？</p>
+<p><strong>A:</strong></p>
+<blockquote>
+<p>好的，我现在需要回答用户关于协程函数是否拥有独立栈空间以及调用协程函数是否需要切换栈指针的问题。用户之前的对话已经涉及协程的实现机制，包括共享栈和状态机模式的区别，以及栈帧保存的必要性。用户现在想确认协程是否使用独立栈空间，以及调用时是否需要切换栈指针。</p>
+<p>首先，我需要回顾之前的讨论。用户之前的问题集中在协程如何保存栈帧，避免数据被覆盖。我的回答提到了共享栈和状态机两种模式，其中共享栈模式每个协程有独立栈空间，而状态机模式则通过编译器将局部变量提升到堆中。用户现在的问题直接询问协程是否有独立栈空间，以及是否需要切换rsp寄存器。</p>
+<p>接下来，我需要明确回答用户的问题：是的，某些协程实现（如共享栈模式）确实使用独立栈空间，并在调用时切换rsp。而状态机模式（如Rust的async&#x2F;await）则不依赖独立栈，而是将状态保存在堆上，因此不需要切换栈指针。</p>
+<p>需要分点详细解释两种模式的区别，特别是栈的使用和切换机制。同时，要举例说明不同语言中的实现，如Go的goroutine使用共享栈，而Rust使用状态机模式。此外，需要比较两者的优缺点，如性能、内存占用和适用场景。</p>
+<p>可能还需要涉及技术细节，如栈指针切换的具体操作，如何通过修改rsp寄存器实现协程切换，以及状态机模式如何避免栈切换。同时，要解答用户可能的疑问，比如为什么有的实现选择共享栈，有的选择状态机，各自的权衡是什么。</p>
+<p>需要确保回答准确，避免错误。例如，Go的协程确实使用分段栈或连续栈，而Rust的async&#x2F;await在编译时转换为状态机，不依赖独立栈空间。同时，要指出切换栈指针的性能影响，以及状态机模式在内存使用上的优势。</p>
+<p>最后，总结两种模式的适用场景，帮助用户理解不同协程实现的优缺点，以便根据具体需求选择合适的模型。</p>
+</blockquote>
+<p>协程是否拥有独立栈空间取决于具体的实现模型，不同编程语言和框架采用了不同的策略。以下是两种主流实现方式的详细对比：</p>
+<hr>
+<h3 id="一、共享栈协程-Stackful-Coroutines"><a href="#一、共享栈协程-Stackful-Coroutines" class="headerlink" title="一、共享栈协程 (Stackful Coroutines)"></a><strong>一、共享栈协程 (Stackful Coroutines)</strong></h3><p><strong>代表实现</strong>：Go goroutine、Lua coroutine、C++ Boost.Coroutine<br><strong>核心特性</strong>：每个协程拥有独立的栈空间，切换时需要修改栈指针寄存器（如x86的<code>rsp</code>）。</p>
+<h4 id="1-栈空间管理"><a href="#1-栈空间管理" class="headerlink" title="1. 栈空间管理"></a><strong>1. 栈空间管理</strong></h4><ul>
+<li><strong>独立栈分配</strong>：<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Go运行时为每个goroutine预分配栈（初始2KB）</span></span><br><span class="line"><span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;  <span class="comment">// 创建新协程</span></span><br><span class="line">    myFunc()  <span class="comment">// 在独立栈中运行</span></span><br><span class="line">&#125;()</span><br></pre></td></tr></table></figure></li>
+<li><strong>栈增长机制</strong>：<ul>
+<li><strong>分段栈</strong>（旧版Go）：栈不足时分配新段，通过<code>morestack</code>检测</li>
+<li><strong>连续栈</strong>（现代Go）：栈不足时整体复制到更大的内存区域</li>
+</ul>
+</li>
+</ul>
+<h4 id="2-栈指针切换"><a href="#2-栈指针切换" class="headerlink" title="2. 栈指针切换"></a><strong>2. 栈指针切换</strong></h4><ul>
+<li><strong>切换原理</strong>：<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">; x86-64协程切换伪代码</span><br><span class="line">swapcontext:</span><br><span class="line">    push    rbp</span><br><span class="line">    mov     rbp, rsp</span><br><span class="line">    ; 保存当前寄存器到旧协程上下文</span><br><span class="line">    mov     [old_ctx + RSP_OFFSET], rsp</span><br><span class="line">    ; 加载新协程的栈指针</span><br><span class="line">    mov     rsp, [new_ctx + RSP_OFFSET]</span><br><span class="line">    ; 恢复新协程的寄存器</span><br><span class="line">    pop     rbp</span><br><span class="line">    ret</span><br></pre></td></tr></table></figure></li>
+<li><strong>性能指标</strong>：<ul>
+<li>切换耗时：约35-50ns（包括保存&#x2F;恢复16个通用寄存器+浮点寄存器）</li>
+<li>内存开销：每个协程至少2KB（Go) 到 8KB (C++)</li>
+</ul>
+</li>
+</ul>
+<h4 id="3-调用链示例"><a href="#3-调用链示例" class="headerlink" title="3. 调用链示例"></a><strong>3. 调用链示例</strong></h4><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">A</span><span class="params">()</span></span> &#123;</span><br><span class="line">    B()  <span class="comment">// 切换到B的栈</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">B</span><span class="params">()</span></span> &#123;</span><br><span class="line">    C()  <span class="comment">// 切换到C的栈</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>内存布局</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────┐</span><br><span class="line">│ 主线程栈     │ ← 0x7ffeefbff000</span><br><span class="line">├─────────────┤</span><br><span class="line">│ Goroutine A栈 │ ← 0xc000032000</span><br><span class="line">├─────────────┤</span><br><span class="line">│ Goroutine B栈 │ ← 0xc0000ac000</span><br><span class="line">└─────────────┘</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="二、无栈协程-Stackless-Coroutines"><a href="#二、无栈协程-Stackless-Coroutines" class="headerlink" title="二、无栈协程 (Stackless Coroutines)"></a><strong>二、无栈协程 (Stackless Coroutines)</strong></h3><p><strong>代表实现</strong>：Rust async&#x2F;await、Python AsyncIO、JavaScript async<br><strong>核心特性</strong>：协程共享主线程栈，通过状态机管理上下文，无需切换栈指针。</p>
+<h4 id="1-实现原理"><a href="#1-实现原理" class="headerlink" title="1. 实现原理"></a><strong>1. 实现原理</strong></h4><ul>
+<li><strong>状态机转换</strong>：<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">fn</span> <span class="title function_">example</span>() &#123;</span><br><span class="line">    <span class="keyword">let</span> <span class="variable">a</span> = <span class="number">1</span>;      <span class="comment">// 状态0</span></span><br><span class="line">    <span class="title function_ invoke__">some_io</span>().<span class="keyword">await</span>; <span class="comment">// 状态1</span></span><br><span class="line">    <span class="built_in">println!</span>(<span class="string">&quot;&#123;&#125;&quot;</span>, a); </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+编译后展开为：<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> <span class="title class_">ExampleFuture</span> &#123;</span><br><span class="line">    state: <span class="type">u32</span>,</span><br><span class="line">    a: <span class="type">i32</span>,</span><br><span class="line">    io_future: SomeIOFuture,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+<li><strong>栈共享机制</strong>：<ul>
+<li>所有局部变量存储在堆上的Future对象中</li>
+<li>主线程栈仅保留当前活跃Future的指针</li>
+</ul>
+</li>
+</ul>
+<h4 id="2-内存布局"><a href="#2-内存布局" class="headerlink" title="2. 内存布局"></a><strong>2. 内存布局</strong></h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────┐</span><br><span class="line">│ 主线程栈     │ </span><br><span class="line">│-------------│ ← 仅存储临时变量和返回地址</span><br><span class="line">│ Future对象指针 → </span><br><span class="line">├─────────────┤</span><br><span class="line">│ 堆内存       │</span><br><span class="line">│-------------│ ← Future对象包含所有协程状态</span><br><span class="line">│ a=1         │</span><br><span class="line">│ io_future   │</span><br><span class="line">└─────────────┘</span><br></pre></td></tr></table></figure>
+
+<h4 id="3-性能对比"><a href="#3-性能对比" class="headerlink" title="3. 性能对比"></a><strong>3. 性能对比</strong></h4><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>共享栈协程</th>
+<th>无栈协程</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单次切换开销</td>
+<td>~35ns</td>
+<td>~18ns</td>
+</tr>
+<tr>
+<td>内存开销&#x2F;协程</td>
+<td>2KB-8KB</td>
+<td>200B-2KB</td>
+</tr>
+<tr>
+<td>最大协程数 (8GB)</td>
+<td>~1,000,000</td>
+<td>~10,000,000</td>
+</tr>
+<tr>
+<td>局部变量访问</td>
+<td>直接栈访问</td>
+<td>间接堆访问</td>
+</tr>
+</tbody></table>
+<hr>
+<h3 id="三、关键问题解答-1"><a href="#三、关键问题解答-1" class="headerlink" title="三、关键问题解答"></a><strong>三、关键问题解答</strong></h3><h4 id="Q1：协程调用是否需要切换栈指针？"><a href="#Q1：协程调用是否需要切换栈指针？" class="headerlink" title="Q1：协程调用是否需要切换栈指针？"></a><strong>Q1：协程调用是否需要切换栈指针？</strong></h4><ul>
+<li><strong>共享栈协程</strong>：<strong>需要</strong>显式切换<code>rsp</code>寄存器  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">; Go调度器切换goroutine时的关键操作</span><br><span class="line">MOVQ    gobuf_sp(BX), SP  // 加载新协程的栈指针</span><br></pre></td></tr></table></figure></li>
+<li><strong>无栈协程</strong>：<strong>无需切换</strong>，所有状态在堆上管理</li>
+</ul>
+<h4 id="Q2：如何避免栈数据覆盖？"><a href="#Q2：如何避免栈数据覆盖？" class="headerlink" title="Q2：如何避免栈数据覆盖？"></a><strong>Q2：如何避免栈数据覆盖？</strong></h4><ul>
+<li><strong>共享栈</strong>：物理内存隔离，每个协程栈独立分配  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Go连续栈扩容时的复制操作</span></span><br><span class="line">old_stack = current_stack;</span><br><span class="line">new_stack = <span class="built_in">malloc</span>(new_size);</span><br><span class="line"><span class="built_in">memcpy</span>(new_stack, old_stack, old_size);</span><br><span class="line"><span class="built_in">free</span>(old_stack);</span><br></pre></td></tr></table></figure></li>
+<li><strong>无栈协程</strong>：局部变量存储在堆对象中，与调用链解耦</li>
+</ul>
+<h4 id="Q3：为何无栈协程性能更高？"><a href="#Q3：为何无栈协程性能更高？" class="headerlink" title="Q3：为何无栈协程性能更高？"></a><strong>Q3：为何无栈协程性能更高？</strong></h4><ul>
+<li><strong>寄存器压力小</strong>：无需保存&#x2F;恢复完整寄存器上下文</li>
+<li><strong>缓存友好</strong>：状态机结构通常更紧凑，提高缓存命中率</li>
+<li><strong>零内存拷贝</strong>：状态切换通过指针跳转完成</li>
+</ul>
+<hr>
+<h3 id="四、语言实现对比"><a href="#四、语言实现对比" class="headerlink" title="四、语言实现对比"></a><strong>四、语言实现对比</strong></h3><h4 id="1-Go-共享栈"><a href="#1-Go-共享栈" class="headerlink" title="1. Go (共享栈)"></a><strong>1. Go (共享栈)</strong></h4><ul>
+<li><strong>栈增长策略</strong>：<ul>
+<li>初始2KB，每次翻倍直至32KB，之后按25%增长</li>
+<li>栈收缩机制防止内存泄漏</li>
+</ul>
+</li>
+<li><strong>调度优势</strong>：<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Go调度器在系统线程间均衡goroutine</span></span><br><span class="line">runtime.GOMAXPROCS(<span class="number">4</span>)  <span class="comment">// 使用4个OS线程</span></span><br></pre></td></tr></table></figure></li>
+</ul>
+<h4 id="2-Rust-无栈"><a href="#2-Rust-无栈" class="headerlink" title="2. Rust (无栈)"></a><strong>2. Rust (无栈)</strong></h4><ul>
+<li><strong>零成本抽象</strong>：<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// async函数编译为状态机，无额外运行时开销</span></span><br><span class="line"><span class="keyword">let</span> <span class="variable">fut</span> = <span class="keyword">async</span> &#123; <span class="number">1</span> &#125;;</span><br><span class="line"><span class="comment">// 等效于：</span></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">MyFuture</span> &#123; <span class="comment">/* 状态字段 */</span> &#125;</span><br><span class="line"><span class="keyword">impl</span> <span class="title class_">Future</span> <span class="keyword">for</span> <span class="title class_">MyFuture</span> &#123;</span><br><span class="line">    <span class="keyword">type</span> <span class="title class_">Output</span> = <span class="type">i32</span>;</span><br><span class="line">    <span class="keyword">fn</span> <span class="title function_">poll</span>(...) &#123; ... &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+<li><strong>无堆分配优化</strong>：<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 通过`#[async_trait]`实现动态分发</span></span><br><span class="line"><span class="meta">#[async_trait]</span></span><br><span class="line"><span class="keyword">trait</span> <span class="title class_">MyTrait</span> &#123;</span><br><span class="line">    <span class="keyword">async</span> <span class="keyword">fn</span> <span class="title function_">method</span>(&amp;<span class="keyword">self</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h4 id="3-Python-生成器式无栈"><a href="#3-Python-生成器式无栈" class="headerlink" title="3. Python (生成器式无栈)"></a><strong>3. Python (生成器式无栈)</strong></h4><ul>
+<li><strong>生成器协程</strong>：<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">coro</span>():</span><br><span class="line">    <span class="keyword">await</span> asyncio.sleep(<span class="number">1</span>)</span><br><span class="line"><span class="comment"># 转换为：</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Coro</span>:</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="variable language_">self</span>.state = <span class="number">0</span></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__next__</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="keyword">if</span> <span class="variable language_">self</span>.state == <span class="number">0</span>:</span><br><span class="line">            <span class="variable language_">self</span>.state = <span class="number">1</span></span><br><span class="line">            <span class="keyword">return</span> sleep(<span class="number">1</span>)</span><br></pre></td></tr></table></figure></li>
+<li><strong>缺陷</strong>：无法深度递归（受解释器栈限制）</li>
+</ul>
+<hr>
+<h3 id="五、总结"><a href="#五、总结" class="headerlink" title="五、总结"></a><strong>五、总结</strong></h3><ul>
+<li><strong>共享栈协程</strong>：通过独立栈空间和<code>rsp</code>切换实现真并发，适合需要深度递归或复杂调用链的场景，以Go为代表。</li>
+<li><strong>无栈协程</strong>：通过状态机和堆存储实现高密度协程，以Rust&#x2F;Python为代表，适合I&#x2F;O密集型和高并发场景。</li>
+<li><strong>选择依据</strong>：<ul>
+<li>需要<strong>高性能和可控内存</strong> → Rust无栈协程</li>
+<li>需要<strong>简单并发模型和深度调用</strong> → Go共享栈协程</li>
+<li><strong>快速开发和高层抽象</strong> → Python无栈协程</li>
+</ul>
+</li>
+</ul>
+<p>两种模型各有优劣，现代运行时（如.NET）甚至支持混合模式，开发者应根据具体需求选择最合适的协程实现。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://blog.linloir.cn">Linloir</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://blog.linloir.cn/2025/03/17/coroutine-llm-qa/">https://blog.linloir.cn/2025/03/17/coroutine-llm-qa/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://blog.linloir.cn" target="_blank">時痕</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%90%8E%E7%AB%AF/">后端</a><a class="post-meta__tags" href="/tags/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/">编程语言</a></div><div class="post-share"><div class="social-share" data-image="/img/cover.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="next-post pull-full" href="/2024/12/31/summary-2023-2024/" title="年终总结 - 2023 至 2024"><img class="cover" src="/img/cover.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">年终总结 - 2023 至 2024</div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info is-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Linloir</div><div class="author-info-description">我、技术、生活与值得分享的一切</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">21</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">18</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/Linloir" target="_blank" title="GitHub"><i class="fab fa-github"></i></a><a class="social-icon" href="mailto:jonathanzhang.st@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Round-1"><span class="toc-number">1.</span> <span class="toc-text">Round 1</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E6%A0%B8%E5%BF%83%E6%9C%BA%E5%88%B6"><span class="toc-number">1.1.</span> <span class="toc-text">一、核心机制</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E5%86%85%E6%A0%B8%E4%BA%A4%E4%BA%92%E7%BB%86%E8%8A%82"><span class="toc-number">1.2.</span> <span class="toc-text">二、内核交互细节</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E6%80%A7%E8%83%BD%E5%85%B3%E9%94%AE%E6%8C%87%E6%A0%87"><span class="toc-number">1.3.</span> <span class="toc-text">三、性能关键指标</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E6%94%AF%E6%8C%81"><span class="toc-number">1.4.</span> <span class="toc-text">四、操作系统支持</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E7%BC%96%E7%A8%8B%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94"><span class="toc-number">1.5.</span> <span class="toc-text">五、编程模型对比</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E5%85%B8%E5%9E%8B%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B"><span class="toc-number">1.6.</span> <span class="toc-text">六、典型工作流程</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Round-2"><span class="toc-number">2.</span> <span class="toc-text">Round 2</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E6%A0%88%E5%B8%A7%E4%BF%9D%E5%AD%98%E7%9A%84%E5%BF%85%E8%A6%81%E6%80%A7"><span class="toc-number">2.1.</span> <span class="toc-text">一、栈帧保存的必要性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E6%A0%88%E5%B8%A7%E4%BF%9D%E5%AD%98%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%96%B9%E5%BC%8F"><span class="toc-number">2.2.</span> <span class="toc-text">二、栈帧保存的实现方式</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-%E8%BD%BB%E9%87%8F%E7%BA%A7%E6%96%B9%E6%A1%88%EF%BC%88Python%E7%AD%89%E8%A7%A3%E9%87%8A%E5%9E%8B%E8%AF%AD%E8%A8%80%EF%BC%89"><span class="toc-number">2.2.1.</span> <span class="toc-text">1. 轻量级方案（Python等解释型语言）</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-%E9%AB%98%E6%80%A7%E8%83%BD%E6%96%B9%E6%A1%88%EF%BC%88C-C-Rust%EF%BC%89"><span class="toc-number">2.2.2.</span> <span class="toc-text">2. 高性能方案（C&#x2F;C++&#x2F;Rust）</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-%E9%9B%B6%E6%8B%B7%E8%B4%9D%E6%96%B9%E6%A1%88%EF%BC%88Go-goroutine%EF%BC%89"><span class="toc-number">2.2.3.</span> <span class="toc-text">3. 零拷贝方案（Go goroutine）</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E6%A0%88%E5%B8%A7%E4%BF%9D%E5%AD%98%E7%9A%84%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86"><span class="toc-number">2.3.</span> <span class="toc-text">三、栈帧保存的底层原理</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-%E5%AF%84%E5%AD%98%E5%99%A8%E7%BA%A7%E4%BF%9D%E5%AD%98"><span class="toc-number">2.3.1.</span> <span class="toc-text">1. 寄存器级保存</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-%E6%A0%88%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86"><span class="toc-number">2.3.2.</span> <span class="toc-text">2. 栈内存管理</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-%E6%A0%88%E6%BA%A2%E5%87%BA%E9%98%B2%E6%8A%A4"><span class="toc-number">2.3.3.</span> <span class="toc-text">3. 栈溢出防护</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E4%B8%8D%E5%90%8C%E8%AF%AD%E8%A8%80%E7%9A%84%E5%AE%9E%E7%8E%B0%E5%AF%B9%E6%AF%94"><span class="toc-number">2.4.</span> <span class="toc-text">四、不同语言的实现对比</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E7%89%B9%E6%AE%8A%E5%9C%BA%E6%99%AF%E5%A4%84%E7%90%86"><span class="toc-number">2.5.</span> <span class="toc-text">五、特殊场景处理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BB%93%E8%AE%BA"><span class="toc-number">2.6.</span> <span class="toc-text">结论</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Round-3"><span class="toc-number">3.</span> <span class="toc-text">Round 3</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E5%9C%BA%E6%99%AF%E8%BF%98%E5%8E%9F%E4%B8%8E%E9%97%AE%E9%A2%98%E6%9C%AC%E8%B4%A8"><span class="toc-number">3.1.</span> <span class="toc-text">一、场景还原与问题本质</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E4%B8%A4%E7%A7%8D%E6%A0%B8%E5%BF%83%E5%AE%9E%E7%8E%B0%E7%AD%96%E7%95%A5"><span class="toc-number">3.2.</span> <span class="toc-text">二、两种核心实现策略</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-%E5%85%B1%E4%BA%AB%E6%A0%88%E6%A8%A1%E5%BC%8F-Stackful-Coroutines"><span class="toc-number">3.2.1.</span> <span class="toc-text">1. 共享栈模式 (Stackful Coroutines)</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-%E7%8A%B6%E6%80%81%E6%9C%BA%E6%A8%A1%E5%BC%8F-Stackless-Coroutines"><span class="toc-number">3.2.2.</span> <span class="toc-text">2. 状态机模式 (Stackless Coroutines)</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E5%85%B3%E9%94%AE%E9%97%AE%E9%A2%98%E8%A7%A3%E7%AD%94"><span class="toc-number">3.3.</span> <span class="toc-text">三、关键问题解答</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Q1%EF%BC%9A%E4%B8%BA%E4%BD%95%E4%B8%8D%E4%BC%9A%E5%8F%91%E7%94%9F%E6%A0%88%E6%95%B0%E6%8D%AE%E8%A6%86%E7%9B%96%EF%BC%9F"><span class="toc-number">3.3.1.</span> <span class="toc-text">Q1：为何不会发生栈数据覆盖？</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Q2%EF%BC%9A%E6%A0%88%E6%95%B0%E6%8D%AE%E6%98%AF%E5%90%A6%E9%9C%80%E8%A6%81%E6%98%BE%E5%BC%8F%E6%8B%B7%E8%B4%9D%EF%BC%9F"><span class="toc-number">3.3.2.</span> <span class="toc-text">Q2：栈数据是否需要显式拷贝？</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Q3%EF%BC%9A%E6%80%A7%E8%83%BD%E5%BD%B1%E5%93%8D%E5%AF%B9%E6%AF%94"><span class="toc-number">3.3.3.</span> <span class="toc-text">Q3：性能影响对比</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E5%85%B7%E4%BD%93%E8%AF%AD%E8%A8%80%E5%AE%9E%E7%8E%B0%E5%89%96%E6%9E%90"><span class="toc-number">3.4.</span> <span class="toc-text">四、具体语言实现剖析</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-Python-AsyncIO"><span class="toc-number">3.4.1.</span> <span class="toc-text">1. Python AsyncIO</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-Rust-async-await"><span class="toc-number">3.4.2.</span> <span class="toc-text">2. Rust async&#x2F;await</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E5%AE%9E%E9%99%85%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80%E7%A4%BA%E4%BE%8B"><span class="toc-number">3.5.</span> <span class="toc-text">五、实际内存布局示例</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%9C%BA%E6%99%AF%EF%BC%9AA-%E2%86%92-B-%E2%86%92-post-http-request%E6%8C%82%E8%B5%B7"><span class="toc-number">3.5.1.</span> <span class="toc-text">场景：A → B → post_http_request挂起</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E6%80%BB%E7%BB%93"><span class="toc-number">3.6.</span> <span class="toc-text">六、总结</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Round-4"><span class="toc-number">4.</span> <span class="toc-text">Round 4</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E5%85%B1%E4%BA%AB%E6%A0%88%E5%8D%8F%E7%A8%8B-Stackful-Coroutines"><span class="toc-number">4.1.</span> <span class="toc-text">一、共享栈协程 (Stackful Coroutines)</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-%E6%A0%88%E7%A9%BA%E9%97%B4%E7%AE%A1%E7%90%86"><span class="toc-number">4.1.1.</span> <span class="toc-text">1. 栈空间管理</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-%E6%A0%88%E6%8C%87%E9%92%88%E5%88%87%E6%8D%A2"><span class="toc-number">4.1.2.</span> <span class="toc-text">2. 栈指针切换</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-%E8%B0%83%E7%94%A8%E9%93%BE%E7%A4%BA%E4%BE%8B"><span class="toc-number">4.1.3.</span> <span class="toc-text">3. 调用链示例</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E6%97%A0%E6%A0%88%E5%8D%8F%E7%A8%8B-Stackless-Coroutines"><span class="toc-number">4.2.</span> <span class="toc-text">二、无栈协程 (Stackless Coroutines)</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86"><span class="toc-number">4.2.1.</span> <span class="toc-text">1. 实现原理</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80"><span class="toc-number">4.2.2.</span> <span class="toc-text">2. 内存布局</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94"><span class="toc-number">4.2.3.</span> <span class="toc-text">3. 性能对比</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E5%85%B3%E9%94%AE%E9%97%AE%E9%A2%98%E8%A7%A3%E7%AD%94-1"><span class="toc-number">4.3.</span> <span class="toc-text">三、关键问题解答</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Q1%EF%BC%9A%E5%8D%8F%E7%A8%8B%E8%B0%83%E7%94%A8%E6%98%AF%E5%90%A6%E9%9C%80%E8%A6%81%E5%88%87%E6%8D%A2%E6%A0%88%E6%8C%87%E9%92%88%EF%BC%9F"><span class="toc-number">4.3.1.</span> <span class="toc-text">Q1：协程调用是否需要切换栈指针？</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Q2%EF%BC%9A%E5%A6%82%E4%BD%95%E9%81%BF%E5%85%8D%E6%A0%88%E6%95%B0%E6%8D%AE%E8%A6%86%E7%9B%96%EF%BC%9F"><span class="toc-number">4.3.2.</span> <span class="toc-text">Q2：如何避免栈数据覆盖？</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Q3%EF%BC%9A%E4%B8%BA%E4%BD%95%E6%97%A0%E6%A0%88%E5%8D%8F%E7%A8%8B%E6%80%A7%E8%83%BD%E6%9B%B4%E9%AB%98%EF%BC%9F"><span class="toc-number">4.3.3.</span> <span class="toc-text">Q3：为何无栈协程性能更高？</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E8%AF%AD%E8%A8%80%E5%AE%9E%E7%8E%B0%E5%AF%B9%E6%AF%94"><span class="toc-number">4.4.</span> <span class="toc-text">四、语言实现对比</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-Go-%E5%85%B1%E4%BA%AB%E6%A0%88"><span class="toc-number">4.4.1.</span> <span class="toc-text">1. Go (共享栈)</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-Rust-%E6%97%A0%E6%A0%88"><span class="toc-number">4.4.2.</span> <span class="toc-text">2. Rust (无栈)</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-Python-%E7%94%9F%E6%88%90%E5%99%A8%E5%BC%8F%E6%97%A0%E6%A0%88"><span class="toc-number">4.4.3.</span> <span class="toc-text">3. Python (生成器式无栈)</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E6%80%BB%E7%BB%93"><span class="toc-number">4.5.</span> <span class="toc-text">五、总结</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/03/17/coroutine-llm-qa/" title="Coroutine 相关疑惑大模型问答记录">Coroutine 相关疑惑大模型问答记录</a><time datetime="2025-03-17T13:09:21.000Z" title="发表于 2025-03-17 21:09:21">2025-03-17</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/12/31/summary-2023-2024/" title="年终总结 - 2023 至 2024">年终总结 - 2023 至 2024</a><time datetime="2024-12-31T17:15:49.000Z" title="发表于 2025-01-01 01:15:49">2025-01-01</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/11/22/debug-windows-socket-drain/" title="问题定位回顾 - Windows 上发起 tcp 连接时提示 Only one usage of each socket address (protocol/network address/port) is normally permitted">问题定位回顾 - Windows 上发起 tcp 连接时提示 Only one usage of each socket address (protocol/network address/port) is normally permitted</a><time datetime="2024-11-22T03:52:37.000Z" title="发表于 2024-11-22 11:52:37">2024-11-22</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/11/19/listary-quick-clone-command/" title="Listary 命令分享 - 快捷 clone 仓库并使用 VSCode 打开">Listary 命令分享 - 快捷 clone 仓库并使用 VSCode 打开</a><time datetime="2024-11-19T06:08:32.000Z" title="发表于 2024-11-19 14:08:32">2024-11-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/11/08/linux-commands/" title="长更 - Linux 常用指令">长更 - Linux 常用指令</a><time datetime="2024-11-08T11:07:08.000Z" title="发表于 2024-11-08 19:07:08">2024-11-08</time></div></div></div></div></div></div></main><footer id="footer" style="background: transparent;"><div id="footer-wrap"><div class="copyright">&copy;2022 - 2025 By Linloir</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div><div class="footer_custom_text">Wirtten with Love ❤</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="translateLink" type="button" title="简繁转换">简</button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="/js/tw_cn.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.js"></script><script>(() => {
+  const panguFn = () => {
+    if (typeof pangu === 'object') pangu.autoSpacingPage()
+    else {
+      btf.getScript('https://cdn.jsdelivr.net/npm/pangu/dist/browser/pangu.min.js')
+        .then(() => {
+          pangu.autoSpacingPage()
+        })
+    }
+  }
+
+  const panguInit = () => {
+    if (true){
+      GLOBAL_CONFIG_SITE.isPost && panguFn()
+    } else {
+      panguFn()
+    }
+  }
+
+  btf.addGlobalFn('pjaxComplete', panguInit, 'pangu')
+  document.addEventListener('DOMContentLoaded', panguInit)
+})()</script><div class="js-pjax"><script>(async () => {
+  const showKatex = () => {
+    document.querySelectorAll('#article-container .katex').forEach(el => el.classList.add('katex-show'))
+  }
+
+  if (!window.katex_js_css) {
+    window.katex_js_css = true
+    await btf.getCSS('https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css')
+    if (false) {
+      await btf.getScript('https://cdn.jsdelivr.net/npm/katex/dist/contrib/copy-tex.min.js')
+    }
+  }
+
+  showKatex()
+})()</script><script>(() => {
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+      const mermaidThemeConfig = `%%{init:{ 'theme':'${theme}'}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+      }
+
+      // mermaid v9 and v10 compatibility
+      typeof renderFn === 'string' ? renderMermaid(renderFn) : renderFn.then(({ svg }) => renderMermaid(svg))
+    })
+  }
+
+  const codeToMermaid = () => {
+    const codeMermaidEle = document.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    if (true) codeToMermaid()
+    const $mermaid = document.querySelectorAll('#article-container .mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script id="canvas_nest" defer="defer" color="165,165,165" opacity="0.8" zIndex="-1" count="99" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-nest.min.js"></script><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js"></script><script>(() => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => fn())
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      pjax.loadUrl('/404')
+    }
+  })
+})()</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
