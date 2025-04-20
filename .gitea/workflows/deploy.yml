@@ -26,7 +26,7 @@ jobs:
           subject: 博客部署启动
           to: 3145078758@qq.com
           from: Gitea Actions
-          body: 博客自动化部署开始执行, 前往 ${{ gitea.server_url }}/Linloir/blog/actions/runs/${{ gitea.run_id }} 查看执行日志
+          body: 博客自动化部署开始执行, 前往 ${{ gitea.server_url }}/Linloir/blog/actions/runs/${{ gitea.run_number }} 查看执行日志
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Node.js
@@ -60,7 +60,7 @@ jobs:
           commit_options: "--no-verify"
           token: "${{ secrets.TOKEN }}"
       - name: Call API to Update Caddy
-        run: curl https://upd.linloir.cn/update/blog.linloir.gitea.linloir.cn
+        run: curl https://upd.linloir.cn/update/blog.linloir.cn
       - name: Send mail On Success
         if: success()
         uses: https://github.com/dawidd6/action-send-mail@v3
@@ -86,4 +86,4 @@ jobs:
           subject: 博客部署失败
           to: 3145078758@qq.com
           from: Gitea Actions
-          body: 博客自动化部署执行失败, 前往 ${{ gitea.server_url }}/Linloir/blog/actions/runs/${{ gitea.run_id }} 查看执行日志
+          body: 博客自动化部署执行失败, 前往 ${{ gitea.server_url }}/Linloir/blog/actions/runs/${{ gitea.run_number }} 查看执行日志
