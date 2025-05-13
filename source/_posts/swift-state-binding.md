@@ -149,8 +149,72 @@ struct MyClass {
 }
 ```
 
-具体的宏想想就已经非常复杂了
+然而，具体的宏想想就已经非常复杂了
 
-也就是说，如果直接用宏来实现这个能力，虽然可以做到，但那样的话似乎更多的关注会在如何实现宏本身而不是实际的逻辑上了
+也就是说，如果想要直接用宏来实现给属性访问添加额外逻辑这一能力，虽然可以做到，但那样的话似乎更多的关注会在如何实现宏本身而不是实际的逻辑上了 (Make 的困境幻视)
 
+那么，从语言设计的角度考虑，是不是可以让开发者更关注于具体逻辑的实现而隐藏宏转换的细节呢？类似 CMake 那样，用一套规范来约束开发者对逻辑的定义，再在这一规范之上构建编译器属性，使得能够将具体逻辑转换成某种编译器能识别的宏，从而开发者只需要遵循规范来定义逻辑，而不再需要编写具体的宏定义了
 
+虽然不知道 Swift 具体是怎么实现的，但我想 Property Wrapper 的出现大概率是相似的思路
+
+在 Property Wrapper 的描述中，Swift 约定了一个编译器属性 `@propertyWrapper`，其可以用于修饰自定义的结构体，结构体的一般结构约定如下：
+
+```swift
+@propertyWrapper
+struct MyPropertyWrapper {
+    var myPropertyUnderlyValue: MyValueType
+
+    init(myPropertyUnderlyValue: MyInitialValueType) {
+        self.myPropertyUnderlyValue = myPropertyUnderlyValue
+    }
+
+    var wrappedValue: MyValueType {
+        get {
+            // Add logic when get
+            myPropertyUnderlyValue
+        }
+        set {
+            // Add logic when set
+            myPropertyUnderlyValue = newValue
+        }
+    }
+
+    var projectedValue: SomeProjectedType {
+        get {
+            self
+        }
+        set {
+            self = newValue
+        }
+    }
+}
+```
+
+我想，之所以这么设计，是因为通过 `struct` 可以提供一个统一的抽象语法树节点来描述整个额外逻辑所需要的所有内容。想象如果不使用 `struct` 结构来包装，那为了实现 `@Lazy` 的能力，需要找一个地方写 `_myValue` 变量，另找一个地方写 `myValue` 需要的 `getter` 和 `setter` 逻辑，并且编译器要能够直到这些分散的表达式节点都是 `@Lazy` 的一部分，这想想就不好实现
+
+通过 `struct` 的包装，虽然使得实际值的存储多了一层结构体的封装，但简化了编译器的实现，并且也统一了可能的表现形式
+
+现在，编译器只需要在将这个结构体转换为一个宏，其在标记了对应属性的声明处进行如下操作即可:
+
+1. 将原先的声明替换为一个 `_originalVarName: MyPropertyWrapper` 的值
+2. 声明 `var originalVarName: MyPropertyWrapper { get, set }` 访问器，通过 `MyPropertyWrapper.wrappedValue` 进行访问
+3. 声明 `var $originalVarName: SomeProjectedType { get, set }` 访问器，通过 `MyPropertyWrapper.projectedValue` 进行访问
+4. 生成 synthesized initializer (如果必须)
+
+看起来就很好实现了，不是吗？
+
+### projectedValue 和 wrappedValue
+
+## State 的魔法
+
+### 可能的 State 结构体
+
+### 展开后的 @State 代码
+
+### 为什么使用 Binding 作为 projectedValue
+
+## Binding 的魔法
+
+### 可能的 Binding 结构体
+
+### 展开后的 @Binding 代码
