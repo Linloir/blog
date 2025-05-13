@@ -162,9 +162,9 @@ struct MyClass {
 ```swift
 @propertyWrapper
 struct MyPropertyWrapper {
-    var myPropertyUnderlyValue: MyValueType
+    private var myPropertyUnderlyValue: MyValueType
 
-    init(myPropertyUnderlyValue: MyInitialValueType) {
+    init(myPropertyUnderlyValue: MyValueType) {
         self.myPropertyUnderlyValue = myPropertyUnderlyValue
     }
 
@@ -183,9 +183,6 @@ struct MyPropertyWrapper {
         get {
             self
         }
-        set {
-            self = newValue
-        }
     }
 }
 ```
@@ -203,18 +200,407 @@ struct MyPropertyWrapper {
 
 看起来就很好实现了，不是吗？
 
+最后生成出来的代码大致可以理解成下面这样:
+
+```swift
+// Original class declaration
+// struct MyClass {
+//     @MyPropertyWrapper var myPropertyValue: MyValueType
+// }
+
+// Converted class declaration
+struct MyClass {
+    private var _myPropertyValue: MyPropertyWrapper
+    
+    var myPropertyValue: MyValueType {
+        get {
+            _myPropertyValue.wrappedValue
+        }
+        set {
+            _myPropertyValue.wrappedValue = newValue
+        }
+    }
+
+    var $myPropertyValue: SomeProjectedType {
+        get {
+            _myPropertyValue.projectedValue
+        }
+        set {
+            _myPropertyValue.projectedValue = newValue
+        }
+    }
+
+    init(myPropertyValue: MyValueType) {
+        _myPropertyValue = MyPropertyWrapper(myPropertyUnderlyValue: myPropertyValue)
+    }
+}
+```
+
 ### projectedValue 和 wrappedValue
+
+在 `MyPropertyWrapper` 的实现中，`wrappedValue` 的作用比较显而易见: 提供了一个对实际存储内容的访问器，在访问器中实现了需要对目标属性添加的额外访问逻辑。而通过将 `myPropertyValue` 改为对 `_myPropertyValue.wrappedValue` 的访问器，可以满足在当前类内对目标属性的访问经过所需要的额外逻辑
+
+然而，只暴露 `wrappedValue` 往往不能满足需求，因为在类内访问 `self.myPropertyValue` 会直接经过 `_myPropertyValue.wrappedValue.get` 解析到 `_myPropertyValue.myPropertyUnderlyValue` 这一实际的底层存储值，这对变量传递就不太友好了: 如果我试图将这个属性传递到其他的函数中，它就会作为实际存储值进行传递，而不会再传递对应的访问器了！
+
+虽然 `@autoclosure` 看似可以解决这个问题，但是这需要被调函数进行主动适配，显然不能够满足所有的情况。我猜想，Swift 语言的开发团队就是为此类情况而额外支持了一种访问器: `projectedValue`
+
+`projectedValue` 可以由开发者自由指定需要返回的对象，并且在类内以 `$myPropertyValue` 的形式暴露，一个简单的设计就是:
+
+```swift
+var projectedValue: MyPropertyWrapper {
+    self
+}
+```
+
+提供一个对 `MyPropertyWrapper` 实例对象的 `get` 访问器，从而当使用 `$myPropertyValue` 进行传参时，依然可以通过传入参数的 `wrappedValue` 来访问并且修改底层存储值
 
 ## State 的魔法
 
+在 SwiftUI 中，`@State` 就是依赖了 Property Wrapper 这一语言特性
+
+很显然，对于显示内容状态的存储，完全符合了 Property Wrapper 的适用场景:
+
+- View 的数据需要以成员变量形式存储并且加以访问和修改 (对象为类的成员变量)
+- 对 View 所引用数据的修改需要通知 UI 框架进行重绘 (变量需要在被赋值时添加额外的通知逻辑)
+- 数据需要能够沿着控件树向下传递，并且子树也能够对存储数据进行修改 (包含额外逻辑的变量访问器需要能够作为参数传递)
+- 对于所有的 View 需要的数据，虽然类型不同，但依赖的逻辑相同 (需要多处复用的额外逻辑)
+
 ### 可能的 State 结构体
+
+要实现对状态的存储和访问，`@State` 包装主要需要做的就是在变量被赋值时，触发 UI 更新逻辑
+
+因此，一个可能的简化版的 `@State` 大概会是如下的样子:
+
+```swift
+@propertyWrapper
+struct State<T> {
+    private state: T
+
+    var wrappedValue: T {
+        get {
+            state
+        }
+        set {
+            state = newValue
+            // call UI update logic
+        }
+    }
+
+    var projectedValue: State<T> {
+        get {
+            self
+        }
+    }
+
+    init(state: T) {
+        self.state = state
+    }
+}
+```
 
 ### 展开后的 @State 代码
 
-### 为什么使用 Binding 作为 projectedValue
+参考 Property Wrapper 展开的逻辑，对于使用了 `@State` 的成员变量，其简化后的展开代码大概会是下面的样子:
+
+```swift
+class MyView: View {
+    // Original declaration
+    // @State var counter: Int = 5
+
+    // Expanded declaration
+    var _counter: State<Int> = State(5)
+
+    var counter: Int {
+        get {
+            _counter.wrappedValue
+        }
+        set {
+            _counter.wrappedValue = newValue
+        }
+    }
+
+    var $counter: State<Int> {
+        get {
+            _counter.projectedValue
+        }
+    }
+
+    var body: some View {
+        // View hierarchy
+    }
+}
+```
+
+对于当前的 View 来说，直接使用例如 `counter = counter + 1` 可以更新状态值并且触发 UI 更新逻辑；而通过传递 `$counter` 则可以允许其他 View 通过 `State<Int>` 提供的接口来更新状态值并且触发 UI 更新逻辑
+
+### 使用 Binding 作为 projectedValue
+
+这看起来已经解决了大半的问题，但还有一些情况需要考虑: 例如有时可能会需要将已有的属性外再添加一些逻辑后再传递给子控件
+
+对于这种情况，如果直接传递 `$state` 所对应的 `State<Int>` 对象，显然是不满足要求的，而如果只是传递一个 `@autoclosure`，又没办法实现 `set` 能力
+
+因此，可以想到的就是创建一个额外的类，来包含需要新增的逻辑，并提供访问接口 (就像另一个 Property Wrapper 那样):
+
+```swift
+class WierdCounter {
+    let get: () -> Int
+    let set: (Int) -> Void
+
+    init(get: () -> Int, set: (Int) -> Void) {
+        self.get = get
+        self.set = set
+    }
+
+    var wrappedValue: Int {
+        get {
+            self.get()
+        }
+        nonmutating set {
+            self.set(newValue)
+        }
+    }
+}
+
+class MyView: View {
+    @State var counter: Int = 5
+
+    var wrappedCounter: WierdCounter = WierdCounter {
+        counter
+    }, set: { newValue in
+        counter = newValue * 2
+    }
+
+    var body: some View {
+        MyAnotherView(counter: wrappedCounter)
+    }
+}
+```
+
+此时，更进一步地思考，目前子控件想要访问父控件传入的状态的话，多少还是有些复杂的: 不仅有时候传入 `State<T>` 有时候传入额外的类，访问实际状态的时候还要经过额外的一层访问器去访问
+
+相比 Swift 设计团队也是这么想的，于是他们首先解决了第一个问题: 先让传入的状态参数类型统一
+
+这其实还比较好实现，不难发现，`WierdCounter` 和 `State<T>` 其实有着相似的结构，而且他们的核心目标都是需要访问 `counter.wrappedValue`，因此不妨在库中就提供一个类似的类，例如 `MyBinding<T>`:
+
+```swift
+struct MyBinding<T> {
+    let get: () -> T
+    let set: (T) -> Void
+
+    var wrappedValue: T {
+        get {
+            self.get()
+        }
+        nonmutating set {
+            self.set(newValue)
+        }
+    }
+
+    init(@escaping get: () -> T, @escaping set: (T) -> Void) {
+        self.get = get
+        self.set = set
+    }
+}
+```
+
+对应的，`State<T>` 的设计也进行相应的调整：
+
+```swift
+@propertyWrapper
+struct State<T> {
+    private state: T
+
+    var wrappedValue: T {
+        get {
+            state
+        }
+        set {
+            state = newValue
+            // call UI update logic
+        }
+    }
+
+    var projectedValue: MyBinding<T> {
+        MyBinding {
+            self.wrappedValue
+        }, set { newValue in
+            self.wrappedValue = newValue
+        }
+    }
+
+    init(state: T) {
+        self.state = state
+    }
+}
+```
+
+这样，展开后的 `MyView` 类也会有相应的变化:
+
+```swift
+class MyView: View {
+    // Original declaration
+    // @State var counter: Int = 5
+
+    // Expanded declaration
+    var _counter: State<Int> = State(5)
+
+    var counter: Int {
+        get {
+            _counter.wrappedValue
+        }
+        set {
+            _counter.wrappedValue = newValue
+        }
+    }
+
+    var $counter: MyBinding<Int> {
+        _counter.projectedValue
+    }
+
+    var body: some View {
+        // View hierarchy
+    }
+}
+```
+
+统一了状态传参的类型，接下来，对于第二个问题，就是 `@Binding` 展现魔法的时刻了
 
 ## Binding 的魔法
 
+其实读到这里，难免会有一种不由自主的冲动:
+
+既然状态参数的类型都统一了，那要简化子控件访问状态的逻辑，不就是要打包 `incomingState.wrappedValue` 这个逻辑嘛！让每个对 `incomingState` 的访问都以 `incomingState.wrappedValue` 的方式进行，不就可以了嘛？
+
+没错！还记得 Property Wrapper 就是干这事的吧！
+
+想必 Swift 开发团队也是这么想的，于是就有了 `@Binding`
+
 ### 可能的 Binding 结构体
 
+有了 `@State` 的经验，猜想 `@Binding` 的实现就简单多了
+
+不妨猜测简化后的 `@Binding` 如下:
+
+```swift
+@propertyWrapper
+struct Binding<T> {
+    let _binding: MyBinding<T>
+
+    let wrappedValue: T {
+        get {
+            self._binding.wrappedValue
+        }
+        nonmutating set {
+            self._binding.wrappedValue = newValue
+        }
+    }
+
+    let projectedValue: Binding<T> {
+        self
+    }
+
+    init(@escaping get: () -> T, @escaping set: (T) -> Void) {
+        self.get = get
+        self.set = set
+    }
+}
+```
+
+这看起来和 `MyBinding<T>` 的定义也太像了！不妨试试合二为一:
+
+```swift
+@propertyWrapper
+struct Binding<T> {
+    let get: () -> T
+    let set: (T) -> Void
+
+    let wrappedValue: Binding<T> {
+        get {
+            self.get()
+        }
+        nonmutating set {
+            self.set(newValue)
+        }
+    }
+
+    let projectedValue: Binding<T> {
+        self
+    }
+
+    init(@escaping get: () -> T, @escaping set: (T) -> Void) {
+        self.get = get
+        self.set = set
+    }
+}
+```
+
+太神奇了，这样甚至不知不觉中统一了 `Binding<T>` 和 `MyBinding<T>` 的实现！接下来，只要让编译器生成 `synthesized initializer` 的时候适配 `Binding<T>` 的初始化方式 (使用 `get` 和 `set` 参数而不是 `Binding<T>` 对象) 似乎就完成了
+
 ### 展开后的 @Binding 代码
+
+那么，根据 Property Wrapper 的展开逻辑，我们来推测一下 `@Binding` 展开后的代码:
+
+```swift
+struct MySubView: View {
+    // Original declaration
+    // @Binding var parentState: Int
+
+    // Expanded declaration
+    var _parentState: Binding<Int>
+
+    var parentState: Int {
+        get {
+            _parentState.wrappedValue
+        }
+        set {
+            _parentState.wrappedValue = newValue
+        }
+    }
+
+    var $parentState: Binding<Int> {
+        get {
+            _parentState.projectedValue
+        }
+    }
+
+    // Synthesized initializer
+    init(parentState: Binding<Int>) {
+        self._parentState = Binding {
+            parentState.wrappedValue
+        }, set: { newValue in
+            parentState.wrappedValue = newValue
+        }
+    }
+}
+```
+
+## 一些奇怪的问题记录
+
+至此，基本完成了对 Swift 中 `@State` 和 `@Binding` 实现原理的深入探索了，但难免还会有一些未解的疑惑
+
+感谢如今大模型的能力，使得部分奇怪的问题得以解答
+
+以下列出部分与大模型问答的摘要
+
+### 手动指定 initializer
+
+#### 提问
+
+如果 `@State` 和 `@Binding` 的生成涉及 `synthesized initializer` 的生成，那么如果我自己手动指定了 initializer，是否与前述中自动生成的 initializer 产生冲突?
+
+#### 回答
+
+会产生影响，如果手动指定了 initializer，需要手动添加对应的初始化逻辑，例如:
+
+```swift
+init(parentState: Binding<Int>, someOtherParams: MyType) {
+    // Add the initialization of bindings
+    self._parentState = Binding {
+        parentState.wrappedValue
+    }, set: { newValue in
+        parentState.wrappedValue = newValue
+    }
+
+    // Other logic
+}
+```
