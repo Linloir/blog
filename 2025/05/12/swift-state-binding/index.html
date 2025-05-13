@@ -1,0 +1,362 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="dark"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Swift 学习笔记 - 从 Property Wrapper 视角探索 State 与 Binding 如何工作 | 時痕</title><meta name="author" content="Linloir"><meta name="copyright" content="Linloir"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#0d0d0d"><meta name="description" content="背景基本学完 Swift 语法后，就开始跟随 Apple 关于 Swift UI 的官方教程 来学习 Swift 如何应用在 iOS App 开发中。 在 Driving Changes in your UI with State and Bindings 这一小节中，教程首次引入了 Swift UI 中关于状态的概念。 教程中使用了简单的代码来介绍 @State 和 @Binding 属性，以及">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Swift 学习笔记 - 从 Property Wrapper 视角探索 State 与 Binding 如何工作">
+<meta property="og:url" content="https://blog.linloir.cn/2025/05/12/swift-state-binding/">
+<meta property="og:site_name" content="時痕">
+<meta property="og:description" content="背景基本学完 Swift 语法后，就开始跟随 Apple 关于 Swift UI 的官方教程 来学习 Swift 如何应用在 iOS App 开发中。 在 Driving Changes in your UI with State and Bindings 这一小节中，教程首次引入了 Swift UI 中关于状态的概念。 教程中使用了简单的代码来介绍 @State 和 @Binding 属性，以及">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.linloir.cn/img/cover.jpg">
+<meta property="article:published_time" content="2025-05-12T15:30:52.000Z">
+<meta property="article:modified_time" content="2025-05-13T05:38:52.372Z">
+<meta property="article:author" content="Linloir">
+<meta property="article:tag" content="编程语言">
+<meta property="article:tag" content="Swift">
+<meta property="article:tag" content="iOS">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.linloir.cn/img/cover.jpg"><link rel="shortcut icon" href="/img/avatar.png"><link rel="canonical" href="https://blog.linloir.cn/2025/05/12/swift-state-binding/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        if (name && globalFn[key][name]) return
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', 'undefined')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', 'undefined')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          const mediaQueryDark = window.matchMedia('(prefers-color-scheme: dark)')
+          const mediaQueryLight = window.matchMedia('(prefers-color-scheme: light)')
+          
+          if (theme === undefined) {
+            if (mediaQueryLight.matches) activateLightMode()
+            else if (mediaQueryDark.matches) activateDarkMode()
+            else {
+              const hour = new Date().getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            mediaQueryDark.addEventListener('change', () => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else {
+            theme === 'light' ? activateLightMode() : activateDarkMode()
+          }
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: {"defaultEncoding":2,"translateDelay":0,"msgToTraditionalChinese":"繁","msgToSimplifiedChinese":"简"},
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: {"chs_to_cht":"已切换为繁体中文","cht_to_chs":"已切换为简体中文","day_to_night":"已切换为深色模式","night_to_day":"已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#1f1f1f","position":"top-center"},
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true,
+  percent: {
+    toc: false,
+    rightside: false,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Swift 学习笔记 - 从 Property Wrapper 视角探索 State 与 Binding 如何工作',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2025-05-13 13:38:52'
+}</script><meta name="generator" content="Hexo 7.3.0"></head><body><script>window.paceOptions = {
+  restartOnPushState: false
+}
+
+btf.addGlobalFn('pjaxSend', () => {
+  Pace.restart()
+}, 'pace_restart')
+
+</script><link rel="stylesheet" href="/css/minimal.css"/><script src="https://cdn.jsdelivr.net/npm/pace-js/pace.min.js"></script><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/img/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">22</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">20</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-th"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/cover.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">時痕</span></a><a class="nav-page-title" href="/"><span class="site-name">Swift 学习笔记 - 从 Property Wrapper 视角探索 State 与 Binding 如何工作</span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-th"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Swift 学习笔记 - 从 Property Wrapper 视角探索 State 与 Binding 如何工作</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-05-12T15:30:52.000Z" title="发表于 2025-05-12 23:30:52">2025-05-12</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-05-13T05:38:52.372Z" title="更新于 2025-05-13 13:38:52">2025-05-13</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%8A%80%E6%9C%AF/">技术</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">1.9k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>6分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>基本学完 Swift 语法后，就开始跟随 <a target="_blank" rel="noopener" href="https://developer.apple.com/tutorials/swiftui-concepts">Apple 关于 Swift UI 的官方教程</a> 来学习 Swift 如何应用在 iOS App 开发中。</p>
+<p>在 <a target="_blank" rel="noopener" href="https://developer.apple.com/tutorials/swiftui-concepts/driving-changes-in-your-ui-with-state-and-bindings">Driving Changes in your UI with State and Bindings</a> 这一小节中，教程首次引入了 Swift UI 中关于状态的概念。</p>
+<p>教程中使用了简单的代码来介绍 <code>@State</code> 和 <code>@Binding</code> 属性，以及如何在工程中使用这两个属性:</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> Foundation</span><br><span class="line"></span><br><span class="line"><span class="comment">// 省略部分代码 ...</span></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">RecipeEditorConfig</span> &#123;</span><br><span class="line">    <span class="keyword">var</span> recipe <span class="operator">=</span> <span class="type">Recipe</span>.emptyRecipe()</span><br><span class="line">    <span class="keyword">var</span> shouldSaveChanges <span class="operator">=</span> <span class="literal">false</span></span><br><span class="line">    <span class="keyword">var</span> isPresented <span class="operator">=</span> <span class="literal">false</span></span><br><span class="line">    <span class="comment">// 省略部分代码 ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> SwiftUI</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">ContentListView</span>: <span class="title class_ inherited__">View</span> &#123;</span><br><span class="line">    <span class="comment">// 省略部分代码 ...</span></span><br><span class="line">    <span class="meta">@State</span> <span class="keyword">private</span> <span class="keyword">var</span> recipeEditorConfig <span class="operator">=</span> <span class="type">RecipeEditorConfig</span>()</span><br><span class="line"></span><br><span class="line">    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> &#123;</span><br><span class="line">        <span class="comment">// 省略部分代码 ...</span></span><br><span class="line">                        <span class="type">RecipeEditor</span>(config: <span class="variable">$recipeEditorConfig</span>)</span><br><span class="line">        <span class="comment">// 省略部分代码 ...</span></span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 省略部分代码 ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> SwiftUI</span><br><span class="line"></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">RecipeEditor</span>: <span class="title class_ inherited__">View</span> &#123;</span><br><span class="line">    <span class="meta">@Binding</span> <span class="keyword">var</span> config: <span class="type">RecipeEditorConfig</span></span><br><span class="line">    </span><br><span class="line">    <span class="keyword">var</span> body: <span class="keyword">some</span> <span class="type">View</span> &#123;</span><br><span class="line">        <span class="type">NavigationStack</span> &#123;</span><br><span class="line">            <span class="type">RecipeEditorForm</span>(config: <span class="variable">$config</span>)</span><br><span class="line">            <span class="comment">// 省略部分代码 ...</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 省略部分代码 ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>由于之前也接触过其他的前端语言，例如 Dart 或是 JavaScript，自然地就会好奇：Swift 这样的语法设计下，是怎么实现状态的刷新的呢？</p>
+<h2 id="一些猜测"><a href="#一些猜测" class="headerlink" title="一些猜测"></a>一些猜测</h2><p>比较直接的猜测就是，传入的 <code>$config</code> 类似闭包语法，实则是传递了一个 <code>&#123; config in return config &#125;</code> 闭包给 <code>RecipeEditor</code></p>
+<p>这看起来好像解答了为什么 <code>RecipeEditor</code> 可以直接修改 <code>ContentListView</code> 中 <code>recipeEditorConfig</code> 的值，但实则有几个关键的问题没有解答：</p>
+<ol>
+<li><code>@State</code> 存在的意义是在状态变更的时候通知渲染层进行重绘，类似 <code>setState</code> 方法，如果直接传入变量闭包，虽然可以修改，但是如何通知 UI 层重绘？</li>
+<li>如果传入的是闭包，闭包是如何赋值给 <code>RecipeEditorConfig</code> 这样的变量的？为什么没有 <code>init</code> 函数依然可以完成这样的赋值？</li>
+<li>在 <code>RecipeEditor</code> 中，是可以直接修改 <code>config</code> 的值的，例如直接给 <code>config</code> 赋新值，如果原本的引用通过闭包传入后解析出来赋值给 <code>config</code>，那这样修改后不就丢失了对原先的对象的引用吗？</li>
+</ol>
+<p>几番提问下来，基本可以肯定应该不是直接通过闭包传递的，而是 <code>@State</code> 和 <code>@Binding</code> 做了更复杂的处理</p>
+<p>而具体做了哪些处理，则要从 Property Wrapper 开始讲起</p>
+<h2 id="Swift-中的-Property-Wrapper"><a href="#Swift-中的-Property-Wrapper" class="headerlink" title="Swift 中的 Property Wrapper"></a>Swift 中的 Property Wrapper</h2><p>在一篇关于 <code>@State</code> 和 <code>@Binding</code> 的问答中，我了解到，这两个属性并非宏 (至少不是库中按照 Macro 描述编写的那种宏)，而是受语言支持的两个 Property Wrapper</p>
+<p>关于 Property Wrapper 的内容，在 <a target="_blank" rel="noopener" href="https://github.com/swiftlang/swift-evolution/blob/main/proposals/0258-property-wrappers.md">Swift Evolution - Property Wrapper</a> 中有提到整个 Property Wrapper 设计的背景、提案和应用场景</p>
+<p>简单说来，Property Wrapper 可以分为 3 步：</p>
+<ol>
+<li>编写由 <code>@propertyWrapper</code> 标识的结构体，这个结构体用于存储包装属性所需要的所有额外信息以及可以提供的方法（例如一个 lazy 包装属性可能会想要存储当前变量是否已经被初始化过、初始化后的值等），这个结构体会暴露 <code>wrappedValue</code> 和 <code>projectValue</code> 两个属性供外部访问</li>
+<li>(猜想): 编译器识别到 <code>@propertyWrapper</code>，将后续结构体对应的 AST 转化为包含该结构体定义的，更复杂的宏定义</li>
+<li>编译器识别到 <code>@MyPropertyWrapper</code>，将后续对应的声明 AST 转化为更复杂的表达式，包括一个私有 <code>MyPropertyWrapper&lt;Value&gt;</code> 结构体对象和对应的访问器</li>
+</ol>
+<h3 id="PropertyWrapper-结构体"><a href="#PropertyWrapper-结构体" class="headerlink" title="PropertyWrapper 结构体"></a>PropertyWrapper 结构体</h3><p>Property Wrapper 这一方案的提出意图解决的问题就是，当访问一个变量时，能够在不增加越来越多且复杂的编译器属性的同时，支持将通用的、可复用的额外逻辑作用在这个访问过程中</p>
+<p>例如，关键词 <code>lazy</code> 本质上就是在试图解决这类问题中的一个: 当访问一个变量时，先判断是否初始化，如果初始化则返回初始化后的值，否则进行初始化</p>
+<p>最初的想法可能就是，写一些重复的代码 (boilerplate code) 来实现这个功能:</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Irrelevant code omitted</span></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">MyClass</span> &#123;</span><br><span class="line">    <span class="keyword">var</span> _myDefaultValue: <span class="type">Int</span> <span class="operator">=</span> <span class="number">123</span></span><br><span class="line">    <span class="keyword">var</span> _myValue: <span class="type">Int</span>? <span class="operator">=</span> <span class="literal">nil</span></span><br><span class="line">    <span class="keyword">var</span> myValue: <span class="type">Int</span> &#123;</span><br><span class="line">        <span class="keyword">get</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> _myValue <span class="operator">==</span> <span class="literal">nil</span> &#123;</span><br><span class="line">                _myValue <span class="operator">=</span> _myDefaultValue</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">guard</span> <span class="keyword">let</span> v <span class="operator">=</span> _myvalue <span class="keyword">else</span> &#123;</span><br><span class="line">                raise <span class="built_in">fatalError</span>()</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> v</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">set</span> &#123;</span><br><span class="line">            _myValue <span class="operator">=</span> newValue</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>但是如果每一个需要用到这个逻辑的地方都要这么些，未免有些复杂</p>
+<p>考虑到宏可以扩展代码，也许可以定义一个宏 <code>@Lazy</code> 来展开这些内容，从而避免每次都重复编写</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Irrelevant code omitted</span></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">MyClass</span> &#123;</span><br><span class="line">    <span class="comment">// 也就是，将</span></span><br><span class="line">    <span class="meta">@Lazy</span> <span class="keyword">var</span> myValue: <span class="type">Int</span> <span class="operator">=</span> <span class="number">123</span></span><br><span class="line">    <span class="comment">// 转换为</span></span><br><span class="line">    <span class="keyword">var</span> _myValue: <span class="type">Int</span>? <span class="operator">=</span> <span class="literal">nil</span></span><br><span class="line">    <span class="keyword">var</span> myValue: <span class="type">Int</span> &#123;</span><br><span class="line">        <span class="keyword">get</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> _myValue <span class="operator">==</span> <span class="literal">nil</span> &#123;</span><br><span class="line">                _myValue <span class="operator">=</span> <span class="number">123</span></span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">guard</span> <span class="keyword">let</span> v <span class="operator">=</span> _myvalue <span class="keyword">else</span> &#123;</span><br><span class="line">                raise <span class="built_in">fatalError</span>()</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> v</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">set</span> &#123;</span><br><span class="line">            _myValue <span class="operator">=</span> newValue</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>然而，具体的宏想想就已经非常复杂了</p>
+<p>也就是说，如果想要直接用宏来实现给属性访问添加额外逻辑这一能力，虽然可以做到，但那样的话似乎更多的关注会在如何实现宏本身而不是实际的逻辑上了 (Make 的困境幻视)</p>
+<p>那么，从语言设计的角度考虑，是不是可以让开发者更关注于具体逻辑的实现而隐藏宏转换的细节呢？类似 CMake 那样，用一套规范来约束开发者对逻辑的定义，再在这一规范之上构建编译器属性，使得能够将具体逻辑转换成某种编译器能识别的宏，从而开发者只需要遵循规范来定义逻辑，而不再需要编写具体的宏定义了</p>
+<p>虽然不知道 Swift 具体是怎么实现的，但我想 Property Wrapper 的出现大概率是相似的思路</p>
+<p>在 Property Wrapper 的描述中，Swift 约定了一个编译器属性 <code>@propertyWrapper</code>，其可以用于修饰自定义的结构体，结构体的一般结构约定如下：</p>
+<figure class="highlight swift"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">@propertyWrapper</span></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">MyPropertyWrapper</span> &#123;</span><br><span class="line">    <span class="keyword">var</span> myPropertyUnderlyValue: <span class="type">MyValueType</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">init</span>(<span class="params">myPropertyUnderlyValue</span>: <span class="type">MyInitialValueType</span>) &#123;</span><br><span class="line">        <span class="keyword">self</span>.myPropertyUnderlyValue <span class="operator">=</span> myPropertyUnderlyValue</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">var</span> wrappedValue: <span class="type">MyValueType</span> &#123;</span><br><span class="line">        <span class="keyword">get</span> &#123;</span><br><span class="line">            <span class="comment">// Add logic when get</span></span><br><span class="line">            myPropertyUnderlyValue</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">set</span> &#123;</span><br><span class="line">            <span class="comment">// Add logic when set</span></span><br><span class="line">            myPropertyUnderlyValue <span class="operator">=</span> newValue</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">var</span> projectedValue: <span class="type">SomeProjectedType</span> &#123;</span><br><span class="line">        <span class="keyword">get</span> &#123;</span><br><span class="line">            <span class="keyword">self</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">set</span> &#123;</span><br><span class="line">            <span class="keyword">self</span> <span class="operator">=</span> newValue</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我想，之所以这么设计，是因为通过 <code>struct</code> 可以提供一个统一的抽象语法树节点来描述整个额外逻辑所需要的所有内容。想象如果不使用 <code>struct</code> 结构来包装，那为了实现 <code>@Lazy</code> 的能力，需要找一个地方写 <code>_myValue</code> 变量，另找一个地方写 <code>myValue</code> 需要的 <code>getter</code> 和 <code>setter</code> 逻辑，并且编译器要能够直到这些分散的表达式节点都是 <code>@Lazy</code> 的一部分，这想想就不好实现</p>
+<p>通过 <code>struct</code> 的包装，虽然使得实际值的存储多了一层结构体的封装，但简化了编译器的实现，并且也统一了可能的表现形式</p>
+<p>现在，编译器只需要在将这个结构体转换为一个宏，其在标记了对应属性的声明处进行如下操作即可:</p>
+<ol>
+<li>将原先的声明替换为一个 <code>_originalVarName: MyPropertyWrapper</code> 的值</li>
+<li>声明 <code>var originalVarName: MyPropertyWrapper &#123; get, set &#125;</code> 访问器，通过 <code>MyPropertyWrapper.wrappedValue</code> 进行访问</li>
+<li>声明 <code>var $originalVarName: SomeProjectedType &#123; get, set &#125;</code> 访问器，通过 <code>MyPropertyWrapper.projectedValue</code> 进行访问</li>
+<li>生成 synthesized initializer (如果必须)</li>
+</ol>
+<p>看起来就很好实现了，不是吗？</p>
+<h3 id="projectedValue-和-wrappedValue"><a href="#projectedValue-和-wrappedValue" class="headerlink" title="projectedValue 和 wrappedValue"></a>projectedValue 和 wrappedValue</h3><h2 id="State-的魔法"><a href="#State-的魔法" class="headerlink" title="State 的魔法"></a>State 的魔法</h2><h3 id="可能的-State-结构体"><a href="#可能的-State-结构体" class="headerlink" title="可能的 State 结构体"></a>可能的 State 结构体</h3><h3 id="展开后的-State-代码"><a href="#展开后的-State-代码" class="headerlink" title="展开后的 @State 代码"></a>展开后的 @State 代码</h3><h3 id="为什么使用-Binding-作为-projectedValue"><a href="#为什么使用-Binding-作为-projectedValue" class="headerlink" title="为什么使用 Binding 作为 projectedValue"></a>为什么使用 Binding 作为 projectedValue</h3><h2 id="Binding-的魔法"><a href="#Binding-的魔法" class="headerlink" title="Binding 的魔法"></a>Binding 的魔法</h2><h3 id="可能的-Binding-结构体"><a href="#可能的-Binding-结构体" class="headerlink" title="可能的 Binding 结构体"></a>可能的 Binding 结构体</h3><h3 id="展开后的-Binding-代码"><a href="#展开后的-Binding-代码" class="headerlink" title="展开后的 @Binding 代码"></a>展开后的 @Binding 代码</h3></article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://blog.linloir.cn">Linloir</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://blog.linloir.cn/2025/05/12/swift-state-binding/">https://blog.linloir.cn/2025/05/12/swift-state-binding/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://blog.linloir.cn" target="_blank">時痕</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80/">编程语言</a><a class="post-meta__tags" href="/tags/Swift/">Swift</a><a class="post-meta__tags" href="/tags/iOS/">iOS</a></div><div class="post-share"><div class="social-share" data-image="/img/cover.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="next-post pull-full" href="/2025/03/17/coroutine-llm-qa/" title="Coroutine 相关疑惑大模型问答记录"><img class="cover" src="/img/cover.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Coroutine 相关疑惑大模型问答记录</div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a href="/2025/03/17/coroutine-llm-qa/" title="Coroutine 相关疑惑大模型问答记录"><img class="cover" src="/img/cover.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2025-03-17</div><div class="title">Coroutine 相关疑惑大模型问答记录</div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info is-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Linloir</div><div class="author-info-description">我、技术、生活与值得分享的一切</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">22</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">20</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/Linloir" target="_blank" title="GitHub"><i class="fab fa-github"></i></a><a class="social-icon" href="mailto:jonathanzhang.st@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%83%8C%E6%99%AF"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E4%BA%9B%E7%8C%9C%E6%B5%8B"><span class="toc-number">2.</span> <span class="toc-text">一些猜测</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Swift-%E4%B8%AD%E7%9A%84-Property-Wrapper"><span class="toc-number">3.</span> <span class="toc-text">Swift 中的 Property Wrapper</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#PropertyWrapper-%E7%BB%93%E6%9E%84%E4%BD%93"><span class="toc-number">3.1.</span> <span class="toc-text">PropertyWrapper 结构体</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#projectedValue-%E5%92%8C-wrappedValue"><span class="toc-number">3.2.</span> <span class="toc-text">projectedValue 和 wrappedValue</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#State-%E7%9A%84%E9%AD%94%E6%B3%95"><span class="toc-number">4.</span> <span class="toc-text">State 的魔法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8F%AF%E8%83%BD%E7%9A%84-State-%E7%BB%93%E6%9E%84%E4%BD%93"><span class="toc-number">4.1.</span> <span class="toc-text">可能的 State 结构体</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B1%95%E5%BC%80%E5%90%8E%E7%9A%84-State-%E4%BB%A3%E7%A0%81"><span class="toc-number">4.2.</span> <span class="toc-text">展开后的 @State 代码</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8-Binding-%E4%BD%9C%E4%B8%BA-projectedValue"><span class="toc-number">4.3.</span> <span class="toc-text">为什么使用 Binding 作为 projectedValue</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Binding-%E7%9A%84%E9%AD%94%E6%B3%95"><span class="toc-number">5.</span> <span class="toc-text">Binding 的魔法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8F%AF%E8%83%BD%E7%9A%84-Binding-%E7%BB%93%E6%9E%84%E4%BD%93"><span class="toc-number">5.1.</span> <span class="toc-text">可能的 Binding 结构体</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B1%95%E5%BC%80%E5%90%8E%E7%9A%84-Binding-%E4%BB%A3%E7%A0%81"><span class="toc-number">5.2.</span> <span class="toc-text">展开后的 @Binding 代码</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/05/12/swift-state-binding/" title="Swift 学习笔记 - 从 Property Wrapper 视角探索 State 与 Binding 如何工作">Swift 学习笔记 - 从 Property Wrapper 视角探索 State 与 Binding 如何工作</a><time datetime="2025-05-12T15:30:52.000Z" title="发表于 2025-05-12 23:30:52">2025-05-12</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/03/17/coroutine-llm-qa/" title="Coroutine 相关疑惑大模型问答记录">Coroutine 相关疑惑大模型问答记录</a><time datetime="2025-03-17T13:09:21.000Z" title="发表于 2025-03-17 21:09:21">2025-03-17</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/12/31/summary-2023-2024/" title="年终总结 - 2023 至 2024">年终总结 - 2023 至 2024</a><time datetime="2024-12-31T17:15:49.000Z" title="发表于 2025-01-01 01:15:49">2025-01-01</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/11/22/debug-windows-socket-drain/" title="问题定位回顾 - Windows 上发起 tcp 连接时提示 Only one usage of each socket address (protocol/network address/port) is normally permitted">问题定位回顾 - Windows 上发起 tcp 连接时提示 Only one usage of each socket address (protocol/network address/port) is normally permitted</a><time datetime="2024-11-22T03:52:37.000Z" title="发表于 2024-11-22 11:52:37">2024-11-22</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/11/19/listary-quick-clone-command/" title="Listary 命令分享 - 快捷 clone 仓库并使用 VSCode 打开">Listary 命令分享 - 快捷 clone 仓库并使用 VSCode 打开</a><time datetime="2024-11-19T06:08:32.000Z" title="发表于 2024-11-19 14:08:32">2024-11-19</time></div></div></div></div></div></div></main><footer id="footer" style="background: transparent;"><div id="footer-wrap"><div class="copyright">&copy;2022 - 2025 By Linloir</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div><div class="footer_custom_text">Wirtten with Love ❤</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="translateLink" type="button" title="简繁转换">简</button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="/js/tw_cn.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox/fancybox.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.js"></script><script>(() => {
+  const panguFn = () => {
+    if (typeof pangu === 'object') pangu.autoSpacingPage()
+    else {
+      btf.getScript('https://cdn.jsdelivr.net/npm/pangu/dist/browser/pangu.min.js')
+        .then(() => {
+          pangu.autoSpacingPage()
+        })
+    }
+  }
+
+  const panguInit = () => {
+    if (true){
+      GLOBAL_CONFIG_SITE.isPost && panguFn()
+    } else {
+      panguFn()
+    }
+  }
+
+  btf.addGlobalFn('pjaxComplete', panguInit, 'pangu')
+  document.addEventListener('DOMContentLoaded', panguInit)
+})()</script><div class="js-pjax"><script>(async () => {
+  const showKatex = () => {
+    document.querySelectorAll('#article-container .katex').forEach(el => el.classList.add('katex-show'))
+  }
+
+  if (!window.katex_js_css) {
+    window.katex_js_css = true
+    await btf.getCSS('https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css')
+    if (false) {
+      await btf.getScript('https://cdn.jsdelivr.net/npm/katex/dist/contrib/copy-tex.min.js')
+    }
+  }
+
+  showKatex()
+})()</script><script>(() => {
+  const runMermaid = ele => {
+    window.loadMermaid = true
+    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+    ele.forEach((item, index) => {
+      const mermaidSrc = item.firstElementChild
+      const mermaidThemeConfig = `%%{init:{ 'theme':'${theme}'}}%%\n`
+      const mermaidID = `mermaid-${index}`
+      const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+
+      const renderFn = mermaid.render(mermaidID, mermaidDefinition)
+      const renderMermaid = svg => {
+        mermaidSrc.insertAdjacentHTML('afterend', svg)
+      }
+
+      // mermaid v9 and v10 compatibility
+      typeof renderFn === 'string' ? renderMermaid(renderFn) : renderFn.then(({ svg }) => renderMermaid(svg))
+    })
+  }
+
+  const codeToMermaid = () => {
+    const codeMermaidEle = document.querySelectorAll('pre > code.mermaid')
+    if (codeMermaidEle.length === 0) return
+
+    codeMermaidEle.forEach(ele => {
+      const preEle = document.createElement('pre')
+      preEle.className = 'mermaid-src'
+      preEle.hidden = true
+      preEle.textContent = ele.textContent
+      const newEle = document.createElement('div')
+      newEle.className = 'mermaid-wrap'
+      newEle.appendChild(preEle)
+      ele.parentNode.replaceWith(newEle)
+    })
+  }
+
+  const loadMermaid = () => {
+    if (true) codeToMermaid()
+    const $mermaid = document.querySelectorAll('#article-container .mermaid-wrap')
+    if ($mermaid.length === 0) return
+
+    const runMermaidFn = () => runMermaid($mermaid)
+    btf.addGlobalFn('themeChange', runMermaidFn, 'mermaid')
+    window.loadMermaid ? runMermaidFn() : btf.getScript('https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js').then(runMermaidFn)
+  }
+
+  btf.addGlobalFn('encrypt', loadMermaid, 'mermaid')
+  window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+})()</script></div><script id="canvas_nest" defer="defer" color="165,165,165" opacity="0.8" zIndex="-1" count="99" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-nest.min.js"></script><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js"></script><script>(() => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => fn())
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      pjax.loadUrl('/404')
+    }
+  })
+})()</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
