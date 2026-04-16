@@ -85,7 +85,7 @@ footer:
   owner:
     enable: true
     since: 2022
-  custom_text: Wirtten with Love ❤
+  custom_text: Wirtten with Love ❤<br><a href="https://beian.miit.gov.cn/" target="_blank">粤ICP备2021153594号-2</a>
   copyright: true
 
 aside:
